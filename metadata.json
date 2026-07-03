@@ -1,0 +1,6 @@
+{
+  "name": "عدن للوساطة العقارية",
+  "description": "المنصة العقارية الإلكترونية الأرقى في العراق - إدارة وعرض العقارات بأحدث التقنيات والمعايير العالمية بلمسات وتأثيرات فخمة",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
