@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -102,8 +103,13 @@ app.post('/api/citizen-login', async (req, res) => {
     if (!emailOrPhone || !password) return res.status(400).json({ success: false, message: 'يرجى إدخال البيانات!' });
 
     const identity = emailOrPhone.trim().toLowerCase();
-    const profiles = await db.profiles.getAll();
-    let profile = profiles.find(p => p.emailOrPhone.trim().toLowerCase() === identity);
+    const existingProfiles = await db.profiles.getByField('emailOrPhone', identity);
+    let profile = existingProfiles[0];
+    
+    if (!profile) {
+        const all = await db.profiles.getAll();
+        profile = all.find(p => p.emailOrPhone.trim().toLowerCase() === identity);
+    }
 
     if (!profile) {
       return res.status(404).json({ success: false, message: 'الحساب غير موجود! يرجى إنشاء حساب جديد.' });
@@ -112,13 +118,14 @@ app.post('/api/citizen-login', async (req, res) => {
     if (profile.status === 'banned') return res.status(403).json({ success: false, message: 'محظور' });
     if (profile.status === 'suspended') return res.status(403).json({ success: false, message: 'معطل' });
 
-    if (profile.password && profile.password !== password) {
-      return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة!' });
+    if (!profile.password) {
+       return res.status(401).json({ success: false, message: 'عذراً، هذا الحساب غير محمي بكلمة مرور. يرجى مراجعة الإدارة.' });
     }
 
-    if (!profile.password) {
-      await db.profiles.update(profile.id, { password });
-      profile.password = password;
+    const isMatch = profile.password.length === 4 ? profile.password === password : await bcrypt.compare(password, profile.password);
+    
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة!' });
     }
         
     await db.activityLogs.add({

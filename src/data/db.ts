@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog, ElectronicAgreement } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -9,14 +9,21 @@ export const firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export class FirestoreCollection<T extends { id?: string }> {
   constructor(public name: string) {}
 
+  
+  async getByField(field: string, value: any): Promise<T[]> {
+    const q = query(collection(firestore, this.name), where(field, "==", value));
+    const snap = await getDocs(q);
+    return snap.docs?.map(d => ({ id: d.id, ...d.data() } as T));
+  }
+
   async getAll(): Promise<T[]> {
     const snap = await getDocs(collection(firestore, this.name));
-    return snap.docs?.map(d => d.data() as T);
+    return snap.docs?.map(d => ({ id: d.id, ...d.data() } as T));
   }
 
   async getById(id: string): Promise<T | null> {
     const snap = await getDoc(doc(firestore, this.name, id));
-    return snap.exists() ? snap.data() as T : null;
+    return snap.exists() ? { id: snap.id, ...snap.data() } as T : null;
   }
 
   async add(item: T): Promise<void> {
