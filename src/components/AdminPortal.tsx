@@ -519,7 +519,7 @@ export default function AdminPortal({
           <button
             id="btn-admin-login-submit"
             type="submit"
-            className="w-full rounded-xl bg-red-600 hover:bg-red-500 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg cursor-pointer"
+            className="w-full rounded-xl bg-red-600 hover:bg-red-500 px-4 py-3 text-sm font-bold text-[#ffffff] transition-all shadow-lg cursor-pointer"
           >
             تحقق وتسجيل دخول الإدارة
           </button>
@@ -630,7 +630,7 @@ export default function AdminPortal({
                   <span>صندوق الوارد الإداري</span>
                 </div>
                 {notifs.unreadMsgs > 0 && (
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full font-mono font-bold text-[9px] animate-bounce">
+                  <span className="bg-red-500 text-[#ffffff] px-2 py-0.5 rounded-full font-mono font-bold text-[9px] animate-bounce">
                     {notifs.unreadMsgs} جديد
                   </span>
                 )}
@@ -799,7 +799,7 @@ export default function AdminPortal({
                     <Banknote className="h-4 w-4" />
                     <span>طلبات دفع المكاتبات</span>
                   </div>
-                  <span className="bg-[#F27D26] text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                  <span className="bg-[#F27D26] text-[#ffffff] text-xs font-bold px-1.5 py-0.5 rounded">
                     جديد
                   </span>
                 </button>
@@ -1031,7 +1031,7 @@ export default function AdminPortal({
                       <button
                         id={`btn-admin-approve-${p.id}`}
                         onClick={() => handleApproveProperty(p.id)}
-                        className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white flex items-center gap-1 cursor-pointer"
+                        className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-[#ffffff] flex items-center gap-1 cursor-pointer"
                         title="موافقة ونشر"
                       >
                         <Check className="h-4 w-4" />
@@ -1345,7 +1345,7 @@ export default function AdminPortal({
                     alert("خطأ في حفظ الإعدادات");
                   }
                 }}
-                className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-[#ffffff] transition-all"
               >
                 حفظ الإعدادات
               </button>
@@ -1429,7 +1429,7 @@ export default function AdminPortal({
                                 pay.packageName,
                               )
                             }
-                            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white flex items-center gap-1 cursor-pointer"
+                            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-[#ffffff] flex items-center gap-1 cursor-pointer"
                           >
                             <Check className="h-4 w-4" />
                             <span>قبول وتفعيل</span>
@@ -1863,7 +1863,7 @@ export default function AdminPortal({
                       </div>
                       <button
                         onClick={() => handleDeleteSupervisor(sv.id)}
-                        className="p-1.5 rounded-lg border border-red-500/15 text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                        className="p-1.5 rounded-lg border border-red-500/15 text-red-400 hover:bg-red-500 hover:text-[#ffffff] transition-all opacity-0 group-hover:opacity-100"
                         title="حذف وإلغاء صلاحيات المشرف"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -2307,7 +2307,7 @@ export default function AdminPortal({
                   تعديل الصفحات، المقالات، البنرات الإعلانية وسياسات المنصة
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-[#F27D26] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
+              <button className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
                 <Plus className="h-4 w-4" /> صفحة جديدة
               </button>
             </div>
@@ -2387,7 +2387,7 @@ export default function AdminPortal({
                   التحكم بالحملات الإعلانية المدفوعة ومساحات العرض في المنصة
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500">
+              <button className="flex items-center gap-2 bg-emerald-600 text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500">
                 <Plus className="h-4 w-4" /> حملة جديدة
               </button>
             </div>
@@ -2601,7 +2601,7 @@ export default function AdminPortal({
             </div>
 
             <div className="flex justify-end pt-4">
-              <button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg">
+              <button className="bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg">
                 حفظ جميع الإعدادات
               </button>
             </div>
@@ -2620,7 +2620,7 @@ export default function AdminPortal({
                   مراجعة حسابات مقدمي الخدمات والموافقة عليها
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-[#F27D26] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
+              <button className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
                 <Plus className="h-4 w-4" /> مقدم خدمة جديد
               </button>
             </div>
@@ -3135,7 +3135,7 @@ export default function AdminPortal({
                       handleApproveProperty(selectedInspectProperty.id);
                       setSelectedInspectProperty(null);
                     }}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer"
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-[#ffffff] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Check className="h-4 w-4" />
                     <span>موافقة ونشر للعقارات العامة</span>

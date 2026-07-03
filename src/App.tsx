@@ -111,6 +111,16 @@ export default function App() {
 
   // Language & User Session state
   const [lang, setLang] = useState<"ar" | "en">("ar");
+  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("aden-theme") as "dark" | "light") || "dark");
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    localStorage.setItem("aden-theme", theme);
+  }, [theme]);
   const [user, setUser] = useState<{
     name: string;
     role: "admin" | "citizen";
@@ -703,7 +713,7 @@ export default function App() {
     <div
       id="aden-app"
       dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
-      className="min-h-screen w-full overflow-x-hidden bg-[#050505] text-slate-100 flex flex-col font-sans selection:bg-[#F27D26] selection:text-white"
+      className="min-h-screen w-full overflow-x-hidden bg-royal-dark text-slate-100 flex flex-col font-sans selection:bg-[#F27D26] selection:text-[#ffffff]"
     >
       {/* Dynamic Background Mesh Grid */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,125,38,0.07)_0%,transparent_60%)] opacity-80 pointer-events-none z-0"></div>
@@ -711,6 +721,8 @@ export default function App() {
 
       {/* Top Professional Navigation Header */}
       <Header
+        theme={theme}
+        setTheme={setTheme}
         currentView={currentView}
         setView={(v) => {
           setView(v);
@@ -800,7 +812,7 @@ export default function App() {
                       setAddError("");
                       setIsAddPropertyOpen(true);
                     }}
-                    className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer self-start sm:self-auto"
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-xs font-bold text-[#ffffff] transition-all cursor-pointer self-start sm:self-auto"
                   >
                     <PlusCircle className="h-4 w-4" />
                     <span>{t.addProperty}</span>
@@ -1313,7 +1325,7 @@ export default function App() {
                   <button
                     id="btn-submit-contact-msg"
                     type="submit"
-                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-3 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5"
+                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-3 text-xs font-bold text-[#ffffff] transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Send className="h-4 w-4" />
                     <span>
@@ -1431,7 +1443,7 @@ export default function App() {
       {/* FOOTER */}
       <footer
         id="app-footer"
-        className="border-t border-white/5 bg-[#050505] py-8 text-center text-slate-500 text-xs relative z-10 select-none"
+        className="border-t border-white/5 bg-royal-dark py-8 text-center text-slate-500 text-xs relative z-10 select-none"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center justify-center gap-2">
@@ -1504,7 +1516,7 @@ export default function App() {
                 }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all ${
                   loginRole === "citizen"
-                    ? "bg-[#F27D26] text-white shadow-md"
+                    ? "bg-[#F27D26] text-[#ffffff] shadow-md"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -1517,7 +1529,7 @@ export default function App() {
                 }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all ${
                   loginRole === "admin"
-                    ? "bg-red-500 text-white shadow-md"
+                    ? "bg-red-500 text-[#ffffff] shadow-md"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -1528,6 +1540,38 @@ export default function App() {
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               {loginRole === "citizen" ? (
                 <div className="space-y-4">
+                  {/* Auth Mode Toggle */}
+                  <div className="flex rounded-xl bg-slate-900 p-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("login");
+                        setLoginError("");
+                      }}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                        authMode === "login"
+                          ? "bg-[#F27D26] text-[#ffffff] shadow-md"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {lang === "ar" ? "تسجيل الدخول" : (lang === "ku" ? "چوونە ژوورەوە" : "Login")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("register");
+                        setLoginError("");
+                      }}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                        authMode === "register"
+                          ? "bg-[#F27D26] text-[#ffffff] shadow-md"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {lang === "ar" ? "حساب جديد" : (lang === "ku" ? "هەژماری نوێ" : "New Account")}
+                    </button>
+                  </div>
+
                   <div>
                     <label className="block text-xs text-slate-400 mb-1.5">
                       {lang === "ar"
@@ -1593,14 +1637,6 @@ export default function App() {
                       />
                     </div>
                   )}
-                  {authMode === "login" && (
-                    <p className="text-xs text-[#F27D26]/80 text-center font-sans">
-                      ⚡{" "}
-                      {lang === "ar"
-                        ? "ليس لديك حساب؟ اضغط على زر حساب جديد في الأعلى"
-                        : "Don't have an account? Click Register above"}
-                    </p>
-                  )}
                 </div>
               ) : (
                 <>
@@ -1647,7 +1683,7 @@ export default function App() {
                     : "bg-red-500 hover:bg-red-600"
                 }`}
               >
-                {t.login}
+                {loginRole === "citizen" && authMode === "register" ? (lang === "ar" ? "إنشاء الحساب" : (lang === "ku" ? "دروستکردنی هەژمار" : "Create Account")) : t.login}
               </button>
             </form>
           </div>
@@ -1694,7 +1730,7 @@ export default function App() {
                 <div className="pt-4">
                   <button
                     onClick={() => setIsAddPropertyOpen(false)}
-                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-2.5 text-xs font-bold text-white transition-all cursor-pointer"
+                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-2.5 text-xs font-bold text-[#ffffff] transition-all cursor-pointer"
                   >
                     {t.close}
                   </button>
@@ -2271,7 +2307,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setUploadedVideo("")}
-                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"
+                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-[#ffffff] text-xs font-bold px-2 py-1 rounded"
                           >
                             حذف الفيديو
                           </button>
@@ -2475,7 +2511,7 @@ export default function App() {
           ></div>
 
           {/* Drawer content body */}
-          <div className="relative w-full max-w-md h-full bg-[#050505] border-r border-white/10 p-6 flex flex-col justify-between shadow-2xl">
+          <div className="relative w-full max-w-md h-full bg-royal-dark border-r border-white/10 p-6 flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
                 <div className="flex flex-wrap items-center gap-2">
@@ -2550,7 +2586,7 @@ export default function App() {
                     setView("listings");
                     setShowFavoritesDrawer(false);
                   }}
-                  className="w-full text-center rounded-xl bg-[#F27D26] py-3 text-xs font-bold text-white hover:bg-[#ff8a3d] transition-all cursor-pointer"
+                  className="w-full text-center rounded-xl bg-[#F27D26] py-3 text-xs font-bold text-[#ffffff] hover:bg-[#ff8a3d] transition-all cursor-pointer"
                 >
                   {t.listings}
                 </button>

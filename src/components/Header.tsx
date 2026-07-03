@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X } from 'lucide-react';
+import { Home, Search, Moon, Sun, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X } from 'lucide-react';
 import { Property } from '../types';
 import { translations } from '../utils/translations';
 import AdenLogo from './AdenLogo';
@@ -14,6 +14,8 @@ interface HeaderProps {
   
   // Bilingual & Action Props
   lang: 'ar' | 'en' | 'ku';
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
   setLang: (lang: 'ar' | 'en' | 'ku') => void;
   user: { name: string; role: 'admin' | 'citizen'; emailOrPhone?: string } | null;
   onOpenLogin: () => void;
@@ -30,6 +32,8 @@ export default function Header({
   selectedCompareCount,
   lang,
   setLang,
+  theme,
+  setTheme,
   user,
   onOpenLogin,
   onOpenAddProperty,
@@ -63,7 +67,7 @@ export default function Header({
   };
 
   return (
-    <header id="app-header" className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#050505]/95 backdrop-blur-md">
+    <header id="app-header" className="sticky top-0 z-50 w-full border-b border-white/5 bg-royal-dark/95 backdrop-blur-md">
       <div className="mx-auto flex flex-wrap max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
         
         {/* Brand Logo & Name */}
@@ -131,6 +135,16 @@ export default function Header({
 
         {/* Action Controls & Language Switcher */}
         <div className="flex items-center gap-2">
+          
+          {/* Theme Toggle Button */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center justify-center rounded-lg border border-white/5 bg-white/5 w-9 h-9 text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+            title={lang === 'ar' ? 'تغيير المظهر' : 'Toggle Theme'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-400" />}
+          </button>
+    
           {/* Language Switch Button */}
           <button
             onClick={toggleLanguage}
@@ -215,7 +229,7 @@ export default function Header({
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div id="mobile-nav-menu" className="border-t border-white/5 bg-[#050505]/95 backdrop-blur-lg lg:hidden">
+        <div id="mobile-nav-menu" className="border-t border-white/5 bg-royal-dark/95 backdrop-blur-lg lg:hidden">
           <div className="space-y-2 px-4 py-4">
             {navItems?.map((item) => {
               const Icon = item.icon;
@@ -238,7 +252,7 @@ export default function Header({
                     <span>{item.label}</span>
                   </div>
                   {item.badge !== undefined && (
-                    <span className="rounded-full bg-[#F27D26] px-2.5 py-0.5 text-[10px] font-bold text-white">
+                    <span className="rounded-full bg-[#F27D26] px-2.5 py-0.5 text-[10px] font-bold text-[#ffffff]">
                       {item.badge}
                     </span>
                   )}

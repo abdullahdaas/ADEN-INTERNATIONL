@@ -38,11 +38,11 @@ export default function ServiceProviderProfile({
 
   return (
     <div
-      className="min-h-screen bg-[#050505] text-slate-300 pb-20 font-sans"
+      className="min-h-screen bg-royal-dark text-slate-300 pb-20 font-sans"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Navbar specific to profile */}
-      <div className="sticky top-0 z-40 bg-[#050505]/90 backdrop-blur-md border-b border-white/5 py-3 px-4 sm:px-6">
+      <div className="sticky top-0 z-40 bg-royal-dark/90 backdrop-blur-md border-b border-white/5 py-3 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
             onClick={onBack}
@@ -62,7 +62,7 @@ export default function ServiceProviderProfile({
           alt="Cover"
           className="w-full h-full object-cover opacity-80"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-royal-dark via-royal-dark/40 to-transparent"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative -mt-20">
@@ -70,7 +70,7 @@ export default function ServiceProviderProfile({
           <img
             src={provider.logo}
             alt={provider.name}
-            className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-[#050505] object-cover bg-slate-800 shadow-2xl"
+            className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-royal-dark object-cover bg-slate-800 shadow-2xl"
           />
           <div className="flex-1 pb-2">
             <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -105,7 +105,7 @@ export default function ServiceProviderProfile({
           <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
             <a
               href={`tel:${provider.contactNumbers[0]}`}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F27D26] hover:bg-[#d96a1a] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20"
             >
               <Phone className="h-5 w-5" /> اتصال
             </a>
@@ -236,7 +236,7 @@ export default function ServiceProviderProfile({
                       </p>
                     </div>
                   </div>
-                  <button className="bg-[#F27D26] hover:bg-[#d96a1a] text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                  <button className="bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all">
                     أضف تقييمك
                   </button>
                 </div>

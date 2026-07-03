@@ -42,7 +42,7 @@ function SearchBox({ onPlaceSelect }: { onPlaceSelect: (loc: {lat: number, lng: 
       <button 
         type="button"
         onClick={(e) => { e.preventDefault(); handleSearch(); }}
-        className="bg-[#F27D26] text-white px-3 py-2 rounded-lg hover:bg-[#ff8a3d] transition-colors shadow-lg pointer-events-auto"
+        className="bg-[#F27D26] text-[#ffffff] px-3 py-2 rounded-lg hover:bg-[#ff8a3d] transition-colors shadow-lg pointer-events-auto"
       >
         <Search className="h-4 w-4" />
       </button>

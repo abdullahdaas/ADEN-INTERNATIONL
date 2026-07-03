@@ -130,10 +130,10 @@ export default function ElectronicAgreementForm({
 
   return (
     <div
-      className="min-h-screen bg-[#050505] text-slate-300 pb-20"
+      className="min-h-screen bg-royal-dark text-slate-300 pb-20"
       dir={isRtl ? "rtl" : "ltr"}
     >
-      <div className="bg-gradient-to-b from-slate-900 to-[#050505] border-b border-white/5 py-8 px-4 sm:px-6">
+      <div className="bg-gradient-to-b from-slate-900 to-royal-dark border-b border-white/5 py-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <button
             onClick={onBack}
@@ -184,7 +184,7 @@ export default function ElectronicAgreementForm({
               className="relative z-10 flex flex-col items-center gap-2"
             >
               <div
-                className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${step >= s.id ? "bg-[#F27D26] text-white shadow-lg shadow-[#F27D26]/20" : "bg-slate-800 text-slate-500 border border-white/10"}`}
+                className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${step >= s.id ? "bg-[#F27D26] text-[#ffffff] shadow-lg shadow-[#F27D26]/20" : "bg-slate-800 text-slate-500 border border-white/10"}`}
               >
                 {s.id}
               </div>
@@ -401,7 +401,7 @@ export default function ElectronicAgreementForm({
             <button
               type="submit"
               disabled={existingRequest}
-              className="w-full bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 disabled:hover:bg-[#F27D26] text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-[#F27D26]/20"
+              className="w-full bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 disabled:hover:bg-[#F27D26] text-[#ffffff] py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-[#F27D26]/20"
             >
               متابعة للدفع
             </button>
@@ -515,14 +515,14 @@ export default function ElectronicAgreementForm({
                       <button
                         type="button"
                         onClick={() => setPaymentMethod("qi_card")}
-                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all ${paymentMethod === "qi_card" ? "border-[#F27D26] bg-[#F27D26]/10 text-white" : "border-white/10 bg-slate-950 text-slate-400 hover:text-white"}`}
+                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all ${paymentMethod === "qi_card" ? "border-[#F27D26] bg-[#F27D26]/10 text-[#ffffff]" : "border-white/10 bg-slate-950 text-slate-400 hover:text-[#ffffff]"}`}
                       >
                         ماستر كارد
                       </button>
                       <button
                         type="button"
                         onClick={() => setPaymentMethod("zain_cash")}
-                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all ${paymentMethod === "zain_cash" ? "border-[#F27D26] bg-[#F27D26]/10 text-white" : "border-white/10 bg-slate-950 text-slate-400 hover:text-white"}`}
+                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all ${paymentMethod === "zain_cash" ? "border-[#F27D26] bg-[#F27D26]/10 text-[#ffffff]" : "border-white/10 bg-slate-950 text-slate-400 hover:text-[#ffffff]"}`}
                       >
                         زين كاش
                       </button>
@@ -622,7 +622,7 @@ export default function ElectronicAgreementForm({
                       !paymentData.payerName ||
                       !paymentData.payerPhone
                     }
-                    className="flex-[2] bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20 flex justify-center items-center gap-2"
+                    className="flex-[2] bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 text-[#ffffff] py-4 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20 flex justify-center items-center gap-2"
                   >
                     {isSubmitting ? (
                       <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
@@ -658,7 +658,7 @@ export default function ElectronicAgreementForm({
             <div className="pt-8 border-t border-white/10 flex flex-col gap-3">
               <button
                 onClick={() => onSuccess(newAgreementId)}
-                className="w-full bg-[#F27D26] hover:bg-[#d96a1a] text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20"
+                className="w-full bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] py-3 rounded-xl font-bold transition-all shadow-lg shadow-[#F27D26]/20"
               >
                 عرض المكاتبة (وثيقة QR)
               </button>

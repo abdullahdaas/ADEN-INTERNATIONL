@@ -208,7 +208,7 @@ export default function PropertyDetails({
                   onCreateAgreement(property);
                 }
               }}
-              className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#F27D26] px-4 py-2 text-sm font-bold text-white hover:bg-[#d96a1a] transition-all shadow-lg shadow-[#F27D26]/20"
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#F27D26] px-4 py-2 text-sm font-bold text-[#ffffff] hover:bg-[#d96a1a] transition-all shadow-lg shadow-[#F27D26]/20"
             >
               <FileSignature className="h-4.5 w-4.5" />
               <span>مكاتبة إلكترونية</span>
@@ -634,7 +634,7 @@ export default function PropertyDetails({
                         <button
                           id="btn-submit-upgrade-proof"
                           type="submit"
-                          className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-[#ffffff] hover:bg-emerald-500 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <Send className="h-4 w-4" />
                           <span>إرسال إثبات الدفع للتدقيق المباشر</span>
@@ -832,7 +832,7 @@ export default function PropertyDetails({
                 href={`https://wa.me/${agent.whatsapp}`}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-white transition-all shadow-lg"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-[#ffffff] transition-all shadow-lg"
               >
                 <MessageCircle className="h-4.5 w-4.5" />
                 <span>محادثة واتساب سريعة</span>
@@ -902,7 +902,7 @@ export default function PropertyDetails({
                   </div>
                 </div>
                 <div className="flex gap-2 pt-4">
-                  <button onClick={handleBookVisit} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-sm font-bold transition-all">
+                  <button onClick={handleBookVisit} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] py-2 rounded-lg text-sm font-bold transition-all">
                     تأكيد حجز الموعد
                   </button>
                   <button onClick={() => setShowVisitModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all">
@@ -1010,7 +1010,7 @@ export default function PropertyDetails({
                       window.alert('تم إرسال البلاغ إلى الإدارة.');
                       setShowComplaintModal(false);
                     } catch(e) {}
-                  }} className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg text-sm font-bold transition-all">
+                  }} className="flex-1 bg-red-600 hover:bg-red-500 text-[#ffffff] py-2 rounded-lg text-sm font-bold transition-all">
                     إرسال البلاغ
                   </button>
                   <button onClick={() => setShowComplaintModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all">
@@ -1023,7 +1023,7 @@ export default function PropertyDetails({
 
           {/* Direct Advertiser Contact Info Card */}
           {property.advertiserPhone && (
-            <div className="rounded-2xl border border-[#F27D26]/20 bg-gradient-to-b from-[#F27D26]/10 to-[#050505]/30 backdrop-blur-md p-6 space-y-4 shadow-xl">
+            <div className="rounded-2xl border border-[#F27D26]/20 bg-gradient-to-b from-[#F27D26]/10 to-royal-dark/30 backdrop-blur-md p-6 space-y-4 shadow-xl">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F27D26]/20 text-[#F27D26] text-sm animate-pulse">
                   📞
@@ -1044,7 +1044,7 @@ export default function PropertyDetails({
                   <button
                     type="button"
                     onClick={() => onViewProfile!(property.ownerEmailOrPhone!)}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/5 hover:bg-[#F27D26]/10 hover:border-[#F27D26]/30 hover:text-white py-3 text-sm font-bold text-slate-300 transition-all cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/5 hover:bg-[#F27D26]/10 hover:border-[#F27D26]/30 hover:text-[#ffffff] py-3 text-sm font-bold text-slate-300 transition-all cursor-pointer"
                   >
                     <User className="h-4 w-4 text-[#F27D26]" />
                     <span>تصفح الملف والصفحة الشخصية للمعلن</span>
@@ -1064,7 +1064,7 @@ export default function PropertyDetails({
                     href={`https://wa.me/${property.advertiserWhatsapp.replace(/[\s+]/g, '')}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-white hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-[#ffffff] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
                   >
                     <MessageCircle className="h-4.5 w-4.5" />
                     <span>مراسلة واتساب: {property.advertiserWhatsapp}</span>

@@ -42,7 +42,7 @@ export default function VerifyAgreement({
 
   return (
     <div
-      className="min-h-screen bg-[#050505] text-slate-300 py-12 px-4 sm:px-6"
+      className="min-h-screen bg-royal-dark text-slate-300 py-12 px-4 sm:px-6"
       dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
     >
       <div className="max-w-3xl mx-auto space-y-8">
@@ -72,7 +72,7 @@ export default function VerifyAgreement({
             <button
               onClick={handleVerify}
               disabled={!serialNumber || status === "loading"}
-              className="bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 text-white px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              className="bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 text-[#ffffff] px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
             >
               {status === "loading" ? (
                 <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>

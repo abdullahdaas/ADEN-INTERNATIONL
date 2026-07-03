@@ -455,7 +455,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
             <div className="rounded-2xl border border-red-500/10 bg-red-500/5 p-6 text-center">
               <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-2" />
               <p className="text-sm font-bold text-red-400">{error}</p>
-              <button onClick={loadMyProperties} className="mt-4 text-xs font-bold text-white bg-red-500/25 border border-red-500/40 rounded-xl px-4 py-2 hover:bg-red-500/40 transition-all">إعادة المحاولة</button>
+              <button onClick={loadMyProperties} className="mt-4 text-xs font-bold text-[#ffffff] bg-red-500/25 border border-red-500/40 rounded-xl px-4 py-2 hover:bg-red-500/40 transition-all">إعادة المحاولة</button>
             </div>
           ) : myProps.length === 0 ? (
             <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-12 text-center">
@@ -530,7 +530,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                         setSelectedProp(prop);
                         setSubmitSuccess(false);
                       }}
-                      className="flex-1 rounded-xl bg-[#F27D26]/10 border border-[#F27D26]/20 py-2 text-xs font-black text-[#F27D26] hover:bg-[#F27D26] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 "
+                      className="flex-1 rounded-xl bg-[#F27D26]/10 border border-[#F27D26]/20 py-2 text-xs font-black text-[#F27D26] hover:bg-[#F27D26] hover:text-[#ffffff] transition-all cursor-pointer flex items-center justify-center gap-1.5 "
                     >
                       <CreditCard className="h-3.5 w-3.5" />
                       <span>تمويل الإعلان</span>
@@ -1153,7 +1153,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                       onClick={() => setPaymentMethod('zain_cash')}
                       className={`cursor-pointer rounded-xl border p-3 text-center transition-all flex items-center justify-center gap-2 ${
                         paymentMethod === 'zain_cash' 
-                          ? 'border-[#F27D26] bg-[#F27D26]/10 text-white font-bold' 
+                          ? 'border-[#F27D26] bg-[#F27D26]/10 text-[#ffffff] font-bold' 
                           : 'border-white/5 bg-white/5 hover:bg-white/10 text-slate-400'
                       }`}
                     >
@@ -1165,7 +1165,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                       onClick={() => setPaymentMethod('qi_card')}
                       className={`cursor-pointer rounded-xl border p-3 text-center transition-all flex items-center justify-center gap-2 ${
                         paymentMethod === 'qi_card' 
-                          ? 'border-emerald-500 bg-emerald-500/10 text-white font-bold' 
+                          ? 'border-emerald-500 bg-emerald-500/10 text-[#ffffff] font-bold' 
                           : 'border-white/5 bg-white/5 hover:bg-white/10 text-slate-400'
                       }`}
                     >

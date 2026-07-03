@@ -128,7 +128,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
                 href={`https://wa.me/${displayWhatsapp.replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/10"
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-[#ffffff] flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/10"
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>{lang === 'ar' ? 'واتساب مباشر' : lang === 'ku' ? 'واتسئاپی ڕاستەوخۆ' : 'WhatsApp'}</span>
@@ -160,7 +160,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
                 : 'Join now to offer your engineering, legal, or maintenance services to thousands of clients on Aden Platform.'}
             </p>
           </div>
-          <button className="bg-white/10 hover:bg-[#F27D26] text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-all border border-white/10 hover:border-[#F27D26]">
+          <button className="bg-white/10 hover:bg-[#F27D26] text-[#ffffff] px-5 py-2.5 rounded-lg text-xs font-bold transition-all border border-white/10 hover:border-[#F27D26]">
             {lang === 'ar' ? 'تسجيل كمقدم خدمة' : 'Register as Provider'}
           </button>
         </div>

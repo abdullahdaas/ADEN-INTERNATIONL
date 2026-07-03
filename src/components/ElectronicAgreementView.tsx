@@ -48,7 +48,7 @@ export default function ElectronicAgreementView({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050505] flex justify-center items-center">
+      <div className="min-h-screen bg-royal-dark flex justify-center items-center">
         <div className="w-10 h-10 border-4 border-[#F27D26] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -56,7 +56,7 @@ export default function ElectronicAgreementView({
 
   if (error || !agreement) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col justify-center items-center text-white">
+      <div className="min-h-screen bg-royal-dark flex flex-col justify-center items-center text-white">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-xl font-bold mb-4">{error}</h2>
         <button onClick={onBack} className="bg-white/10 px-6 py-2 rounded-xl">رجوع</button>
@@ -66,7 +66,7 @@ export default function ElectronicAgreementView({
 
   return (
     <div
-      className="min-h-screen bg-[#050505] text-slate-300 pb-20 print:bg-white print:text-black"
+      className="min-h-screen bg-royal-dark text-slate-300 pb-20 print:bg-white print:text-black"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Non-printable header */}
@@ -88,7 +88,7 @@ export default function ElectronicAgreementView({
             </button>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 bg-[#F27D26] hover:bg-[#d96a1a] text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-[#F27D26]/20"
+              className="flex items-center gap-2 bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-[#F27D26]/20"
             >
               <Download className="h-4 w-4" /> تحميل PDF
             </button>

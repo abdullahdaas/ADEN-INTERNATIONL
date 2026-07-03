@@ -151,7 +151,7 @@ export default function MapSearch({ properties, onSelectProperty }: MapSearchPro
                   </div>
                   <button 
                     onClick={() => onSelectProperty(p)}
-                    className="mt-1 w-full bg-[#F27D26] text-white py-1.5 rounded text-xs font-bold hover:bg-[#ff8a3d]"
+                    className="mt-1 w-full bg-[#F27D26] text-[#ffffff] py-1.5 rounded text-xs font-bold hover:bg-[#ff8a3d]"
                   >
                     عرض التفاصيل
                   </button>

@@ -148,11 +148,11 @@ export default function ServiceProvidersList({
 
   return (
     <div
-      className="min-h-screen bg-[#050505] text-slate-300 pb-20"
+      className="min-h-screen bg-royal-dark text-slate-300 pb-20"
       dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
     >
       {/* Hero Section */}
-      <div className="bg-gradient-to-b from-slate-900 to-[#050505] border-b border-white/5 py-12 px-4 sm:px-6">
+      <div className="bg-gradient-to-b from-slate-900 to-royal-dark border-b border-white/5 py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-black text-white mb-4">
             الخدمات العقارية
@@ -230,7 +230,7 @@ export default function ServiceProvidersList({
                   alt="Cover"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-royal-dark to-transparent"></div>
                 {provider.isPromoted && (
                   <span className="absolute top-3 right-3 bg-gold-prestige text-slate-900 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
                     <Star className="h-3 w-3 fill-slate-900" /> إعلان مميز
@@ -241,7 +241,7 @@ export default function ServiceProvidersList({
                 <img
                   src={provider.logo}
                   alt={provider.name}
-                  className="w-16 h-16 rounded-xl border-4 border-[#050505] object-cover absolute -top-8 bg-slate-800"
+                  className="w-16 h-16 rounded-xl border-4 border-royal-dark object-cover absolute -top-8 bg-slate-800"
                 />
                 <div className="pt-10">
                   <div className="flex items-start justify-between mb-2">

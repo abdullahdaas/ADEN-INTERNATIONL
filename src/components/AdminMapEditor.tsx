@@ -115,7 +115,7 @@ export function AdminMapEditor({ properties, onRefresh }: AdminMapEditorProps) {
                     <button 
                       onClick={handleSaveLocation}
                       disabled={isSaving}
-                      className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 py-2 bg-emerald-600 text-[#ffffff] rounded-lg text-xs font-bold hover:bg-emerald-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Save className="h-4 w-4" />
                       {isSaving ? 'جاري الحفظ...' : 'حفظ الموقع'}
