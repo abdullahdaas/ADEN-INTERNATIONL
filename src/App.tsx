@@ -732,6 +732,7 @@ export default function App() {
         onOpenFavorites={() => setShowFavoritesDrawer(true)}
         onLogoDoubleClick={() => {
           setLoginRole("admin");
+          setAuthMode("login");
           setIsLoginOpen(true);
         }}
         selectedCompareCount={compareList.length}
@@ -740,11 +741,13 @@ export default function App() {
         user={user}
         onOpenLogin={() => {
           setLoginError("");
+          setAuthMode("login");
           setIsLoginOpen(true);
         }}
         onOpenAddProperty={() => {
           if (!user || user.role !== "citizen") {
             setLoginRole("citizen");
+            setAuthMode("login");
             setIsLoginOpen(true);
             return;
           }

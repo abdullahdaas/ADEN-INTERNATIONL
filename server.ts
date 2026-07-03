@@ -57,11 +57,14 @@ app.post('/api/citizen-register', async (req, res) => {
     }
     const identity = emailOrPhone.trim().toLowerCase();
     const profiles = await db.profiles.getAll();
-    let existing = profiles.find(p => p.emailOrPhone.trim().toLowerCase() === identity);
+    const existing = profiles.find(p => p.emailOrPhone.trim().toLowerCase() === identity);
     
     if (existing) {
       return res.status(400).json({ success: false, message: 'هذا الحساب مسجل مسبقاً، يرجى تسجيل الدخول.' });
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const newProfile = {
       id: 'user-' + Date.now(),
@@ -74,7 +77,7 @@ app.post('/api/citizen-register', async (req, res) => {
       bio: '',
       customSlug: 'user-' + Date.now(),
       isVerified: false,
-      password: password,
+      password: hashedPassword,
       status: 'active' as const,
       role: 'citizen' as const,
       createdAt: new Date().toISOString()
