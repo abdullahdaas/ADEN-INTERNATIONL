@@ -97,9 +97,11 @@ export default function ElectronicAgreementView({
       </div>
 
       {/* Printable Document A4 Size Simulation */}
-      <div className="max-w-4xl mx-auto mt-8 p-8 sm:p-12 bg-white text-slate-900 rounded-lg shadow-2xl print:shadow-none print:m-0 print:p-0">
-        {/* Document Header */}
-        <div className="flex items-start justify-between border-b-2 border-slate-200 pb-6 mb-8">
+      <div className="w-full overflow-x-auto pb-8 print:pb-0 print:overflow-visible">
+        <div className="w-[210mm] min-h-[297mm] mx-auto mt-8 p-[20mm] bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 print:p-0 print:w-full print:min-h-[297mm] shrink-0 relative box-border">
+          {/* Document Header */}
+          <div className="flex items-start justify-between border-b-2 border-slate-200 pb-6 mb-8">
+
           <div>
             <div className="text-black mb-2">
               <AdenLogo size={40} />
@@ -108,7 +110,10 @@ export default function ElectronicAgreementView({
               مكاتبة إلكترونية (اتفاق أولي)
             </h1>
             <p className="text-sm text-slate-500 font-mono mt-1">
-              رقم الوثيقة: {agreement.serialNumber}
+              الرقم التسلسلي (Serial No): {agreement.serialNumber}
+            </p>
+            <p className="text-xs text-slate-400 font-mono mt-1">
+              المعرف الفريد (ID): {agreement.id}
             </p>
           </div>
           <div className="text-left" dir="ltr">
@@ -134,7 +139,7 @@ export default function ElectronicAgreementView({
         </div>
 
         {/* Parties Details */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-8 mb-8">
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">
               الطرف الأول (البائع)
@@ -190,7 +195,7 @@ export default function ElectronicAgreementView({
         </h3>
 
         <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 space-y-4 mb-8">
-          <div className="grid grid-cols-2 gap-y-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-y-4 text-sm">
             <div>
               <span className="block text-slate-500 mb-1">تفاصيل العقار</span>
               <span className="font-bold text-slate-800">
@@ -262,6 +267,7 @@ export default function ElectronicAgreementView({
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

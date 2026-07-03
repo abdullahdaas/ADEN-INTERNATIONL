@@ -125,23 +125,7 @@ export default function App() {
   const [citizenName, setCitizenName] = useState("");
   const [citizenEmailOrPhone, setCitizenEmailOrPhone] = useState("");
   const [citizenPassword, setCitizenPassword] = useState("");
-  const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpTimer, setOtpTimer] = useState(0);
   const [adminUsername, setAdminUsername] = useState("");
-
-  useEffect(() => {
-    let interval: any;
-    if (showOtpInput && otpTimer > 0) {
-      interval = setInterval(() => {
-        setOtpTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (otpTimer === 0) {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [showOtpInput, otpTimer]);
-
   const [adminPassword, setAdminPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
@@ -447,91 +431,19 @@ export default function App() {
         return;
       }
 
-      const isPhone = phoneRegex.test(identifier);
-
-      if (isPhone && !showOtpInput) {
-        // First step for phone login: call sendOtp
-        try {
-          const res = await fetch("/api/otp/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone: identifier }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            setShowOtpInput(true);
-            setOtpTimer(300); // 5 minutes
-            setLoginError("");
-            alert(
-              data.message ||
-                (lang === "ar"
-                  ? "تم إرسال رمز التفعيل (OTP) إلى هاتفك."
-                  : "OTP sent to your phone."),
-            );
-          } else {
-            setLoginError(data.message);
-          }
-        } catch (err) {
-          setLoginError(
-            lang === "ar"
-              ? "خطأ في الاتصال بالخادم!"
-              : "Server connection failed!",
-          );
-        }
-        return;
-      }
-
-      if (isPhone && showOtpInput) {
-        if (!otpCode.trim()) {
-          setLoginError(
-            lang === "ar"
-              ? "يرجى إدخال رمز التفعيل!"
-              : "Please enter the OTP code!",
-          );
-          return;
-        }
-        // Verify OTP
-        try {
-          const res = await fetch("/api/otp/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: identifier,
-              code: otpCode,
-              name: citizenName,
-            }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            setUser(data.profile);
-            localStorage.setItem("aden-user", JSON.stringify(data.profile));
-            setIsLoginOpen(false);
-            setCitizenName("");
-            setCitizenEmailOrPhone("");
-            setCitizenPassword("");
-            setShowOtpInput(false);
-            setOtpCode("");
-            setOtpTimer(0);
-            alert(t.loginSuccess);
-          } else {
-            setLoginError(data.message);
-          }
-        } catch (err) {
-          setLoginError(
-            lang === "ar"
-              ? "خطأ في الاتصال بالخادم!"
-              : "Server connection failed!",
-          );
-        }
-        return;
-      }
-
-      // Email login path
       if (!citizenEmailOrPhone.trim() || !citizenPassword.trim()) {
         setLoginError(
           lang === "ar"
-            ? "يرجى إدخال البريد الإلكتروني وكلمة المرور!"
-            : "Please enter your email and password!",
+            ? "يرجى إدخال البريد الإلكتروني أو رقم الهاتف مع كلمة المرور!"
+            : "Please enter your email or phone and password!",
+        );
+        return;
+      }
+      if (citizenPassword.length !== 4) {
+        setLoginError(
+          lang === "ar"
+            ? "كلمة المرور يجب أن تتكون من 4 أرقام أو حروف فقط!"
+            : "Password must be exactly 4 characters or digits!",
         );
         return;
       }
@@ -779,7 +691,8 @@ export default function App() {
   return (
     <div
       id="aden-app"
-      className="min-h-screen bg-[#050505] text-slate-100 flex flex-col font-sans selection:bg-[#F27D26] selection:text-white"
+      dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
+      className="min-h-screen w-full overflow-x-hidden bg-[#050505] text-slate-100 flex flex-col font-sans selection:bg-[#F27D26] selection:text-white"
     >
       {/* Dynamic Background Mesh Grid */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,125,38,0.07)_0%,transparent_60%)] opacity-80 pointer-events-none z-0"></div>
@@ -829,17 +742,17 @@ export default function App() {
               id="hero-banner"
               className="relative rounded-3xl border border-white/5 bg-gradient-to-b from-[#F27D26]/10 to-transparent p-6 sm:p-12 text-center overflow-hidden"
             >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#F27D26]/5 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 sm:w-96 sm:h-96 bg-[#F27D26]/5 rounded-full blur-3xl pointer-events-none"></div>
 
               <div className="max-w-3xl mx-auto space-y-4 mb-8">
-                <span className="inline-flex items-center space-x-2 space-x-reverse rounded-full bg-[#F27D26]/10 px-3.5 py-1 text-xs font-bold text-[#F27D26] border border-[#F27D26]/25">
+                <span className="inline-flex flex-wrap items-center gap-2 rounded-full bg-[#F27D26]/10 px-3.5 py-1 text-xs font-bold text-[#F27D26] border border-[#F27D26]/25">
                   <Award className="h-3.5 w-3.5 animate-pulse" />
                   <span>{t.platformFirst}</span>
                 </span>
-                <h1 className="text-3xl font-black text-white sm:text-5xl tracking-tight leading-tight">
+                <h1 className="text-3xl font-black text-white sm:text-5xl leading-normal">
                   {t.sloganTitle}
                 </h1>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto font-sans">
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed sm:leading-loose max-w-2xl mx-auto font-sans">
                   {t.sloganDesc}
                 </p>
               </div>
@@ -857,7 +770,7 @@ export default function App() {
             {user?.role === "citizen" && (
               <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center space-x-3 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
                       <ClipboardList className="h-5 w-5" />
                     </div>
@@ -876,7 +789,7 @@ export default function App() {
                       setAddError("");
                       setIsAddPropertyOpen(true);
                     }}
-                    className="flex items-center space-x-1.5 space-x-reverse rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer self-start sm:self-auto"
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer self-start sm:self-auto"
                   >
                     <PlusCircle className="h-4 w-4" />
                     <span>{t.addProperty}</span>
@@ -902,7 +815,7 @@ export default function App() {
                         >
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 rounded px-1.5 py-0.5 border border-amber-400/25">
+                              <span className="text-xs font-bold text-amber-400 bg-amber-400/10 rounded px-1.5 py-0.5 border border-amber-400/25">
                                 {t.notApprovedYet}
                               </span>
                               <span className="text-[9px] font-mono text-slate-500">
@@ -912,7 +825,7 @@ export default function App() {
                             <h5 className="text-xs font-bold text-white truncate">
                               {prop.title}
                             </h5>
-                            <p className="text-[10px] text-slate-400 font-sans">
+                            <p className="text-xs text-slate-400 font-sans">
                               📍 {prop.governorate} • {prop.district}
                             </p>
                           </div>
@@ -920,7 +833,7 @@ export default function App() {
                             <span className="text-xs font-bold text-[#F27D26]">
                               {formatPrice(prop.price, prop.status)}
                             </span>
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-xs text-slate-500">
                               {prop.space} م²
                             </span>
                           </div>
@@ -1019,7 +932,7 @@ export default function App() {
             {/* Featured Properties Row (العقارات المميزة) */}
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <Flame className="h-5 w-5 text-[#ff8a3d] animate-pulse" />
                   <h3 className="text-lg font-bold text-white">
                     {lang === "ar"
@@ -1510,7 +1423,7 @@ export default function App() {
         className="border-t border-white/5 bg-[#050505] py-8 text-center text-slate-500 text-xs relative z-10 select-none"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center justify-center space-x-2 space-x-reverse">
+          <div className="flex items-center justify-center gap-2">
             <AdenLogo size={40} />
             <span className="text-slate-600">|</span>
             <span className="font-sans">
@@ -1523,10 +1436,16 @@ export default function App() {
           </div>
 
           <div className="flex flex-col sm:items-end gap-1">
-            <a href="mailto:adenofice@gmail.com" className="text-[#F27D26] hover:text-[#d96a1a] transition-colors flex items-center justify-center sm:justify-end gap-2 mb-2">
-              <Mail className="h-4 w-4" />
-              <span className="font-sans font-medium">adenofice@gmail.com</span>
-            </a>
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 mb-2">
+              <a href="tel:07810060292" className="text-[#F27D26] hover:text-[#d96a1a] transition-colors flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                <span className="font-sans font-medium" dir="ltr">07810060292</span>
+              </a>
+              <a href="mailto:adenofice@gmail.com" className="text-[#F27D26] hover:text-[#d96a1a] transition-colors flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                <span className="font-sans font-medium">adenofice@gmail.com</span>
+              </a>
+            </div>
             <p className="font-sans">
               &copy; 2026 {t.logoTitle}.{" "}
               {lang === "ar"
@@ -1621,22 +1540,21 @@ export default function App() {
                       className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40 text-left font-mono"
                     />
                   </div>
-                  {!showOtpInput &&
-                    !/^(\+?\d{8,15})$/.test(citizenEmailOrPhone) && (
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1.5">
-                          {t.password}
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          placeholder="••••"
-                          value={citizenPassword}
-                          onChange={(e) => setCitizenPassword(e.target.value)}
-                          className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40 text-left font-mono"
-                        />
-                      </div>
-                    )}
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1.5">
+                      {t.password}
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••"
+                      maxLength={4}
+                      minLength={4}
+                      value={citizenPassword}
+                      onChange={(e) => setCitizenPassword(e.target.value)}
+                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40 text-left font-mono"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1.5">
                       <span>
@@ -1646,7 +1564,7 @@ export default function App() {
                             ? "ناوی تەواو"
                             : "Your Full Name"}
                       </span>
-                      <span className="text-[10px] text-slate-500 mr-2 font-normal">
+                      <span className="text-xs text-slate-500 mr-2 font-normal">
                         (
                         {lang === "ar"
                           ? "اختياري للتسجيل الجديد"
@@ -1670,69 +1588,7 @@ export default function App() {
                       className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40"
                     />
                   </div>
-                  {showOtpInput && (
-                    <div className="animate-fade-in p-4 rounded-xl border border-[#F27D26]/20 bg-[#F27D26]/5">
-                      <label className="block text-xs text-[#F27D26] font-bold mb-3 text-center">
-                        {lang === "ar"
-                          ? "أدخل رمز التحقق"
-                          : lang === "ku"
-                            ? "کۆدی چالاککردن (OTP)"
-                            : "Enter OTP Code"}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="1234"
-                        maxLength={4}
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
-                        className="w-full rounded-xl border border-[#F27D26]/50 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-[#F27D26] text-center font-mono tracking-[1em] font-bold"
-                      />
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs font-mono font-bold text-slate-300">
-                          {Math.floor(otpTimer / 60)}:
-                          {(otpTimer % 60).toString().padStart(2, "0")}
-                        </span>
-                        {otpTimer === 0 ? (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                const res = await fetch("/api/otp/send", {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({
-                                    phone: citizenEmailOrPhone,
-                                  }),
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                  setOtpTimer(300);
-                                  alert(data.message || "تم إعادة إرسال الرمز");
-                                } else setLoginError(data.message);
-                              } catch (e) {
-                                setLoginError("خطأ");
-                              }
-                            }}
-                            className="text-xs font-bold text-[#F27D26] hover:underline"
-                          >
-                            {lang === "ar"
-                              ? "إعادة إرسال الرمز"
-                              : "Resend Code"}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-500">
-                            {lang === "ar"
-                              ? "يرجى الانتظار قبل طلب رمز جديد"
-                              : "Wait before resending"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-[#F27D26]/80 text-center font-sans">
+                  <p className="text-xs text-[#F27D26]/80 text-center font-sans">
                     ⚡{" "}
                     {lang === "ar"
                       ? "قم بتسجيل الدخول أو إنشاء حساب جديد فوراً إذا لم تكن مسجلاً"
@@ -1773,7 +1629,7 @@ export default function App() {
               )}
 
               {loginError && (
-                <p className="text-[11px] text-red-400 text-center bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                <p className="text-xs text-red-400 text-center bg-red-500/10 p-2 rounded-lg border border-red-500/20">
                   {loginError}
                 </p>
               )}
@@ -1786,21 +1642,7 @@ export default function App() {
                     : "bg-red-500 hover:bg-red-600"
                 }`}
               >
-                {loginRole === "citizen"
-                  ? showOtpInput
-                    ? lang === "ar"
-                      ? "تأكيد الرمز والدخول"
-                      : lang === "ku"
-                        ? "تایبەتمەندی پشتڕاست بکەرەوە"
-                        : "Verify and Login"
-                    : /^(\+?\d{8,15})$/.test(citizenEmailOrPhone)
-                      ? lang === "ar"
-                        ? "أرسل الرمز"
-                        : lang === "ku"
-                          ? "ناردنی کۆد"
-                          : "Send Code"
-                      : t.login
-                  : t.login}
+                {t.login}
               </button>
             </form>
           </div>
@@ -2046,7 +1888,7 @@ export default function App() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                     {/* Governorate Select */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.governorate}
                       </label>
                       <select
@@ -2070,7 +1912,7 @@ export default function App() {
 
                     {/* District Select */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.district}
                       </label>
                       <select
@@ -2095,7 +1937,7 @@ export default function App() {
 
                     {/* Sub-district Select */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.subDistrict}
                       </label>
                       <select
@@ -2120,7 +1962,7 @@ export default function App() {
 
                     {/* Neighborhood Select */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.neighborhood}
                       </label>
                       <select
@@ -2145,7 +1987,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {t.addressLabel}
                     </label>
                     <input
@@ -2178,7 +2020,7 @@ export default function App() {
                 {/* Specs Grid */}
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 bg-slate-900/40 rounded-xl p-4 border border-white/5">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {t.bedroomsLabel}
                     </label>
                     <input
@@ -2190,7 +2032,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {t.bathroomsLabel}
                     </label>
                     <input
@@ -2202,7 +2044,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {lang === "ar" ? "عدد الصالات" : "Living Rooms"}
                     </label>
                     <input
@@ -2214,7 +2056,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {lang === "ar" ? "عدد الطوابق" : "Floors"}
                     </label>
                     <input
@@ -2226,7 +2068,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
+                    <label className="block text-xs text-slate-400 mb-1">
                       {t.constructionYearLabel}
                     </label>
                     <input
@@ -2247,7 +2089,7 @@ export default function App() {
                       : "Supplemental structural features:"}
                   </span>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={newIsFurnished}
@@ -2256,7 +2098,7 @@ export default function App() {
                       />
                       <span>{t.isFurnished}</span>
                     </label>
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={hasGarage}
@@ -2265,7 +2107,7 @@ export default function App() {
                       />
                       <span>{t.hasGarage}</span>
                     </label>
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={hasGarden}
@@ -2274,7 +2116,7 @@ export default function App() {
                       />
                       <span>{t.hasGarden}</span>
                     </label>
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={hasElevator}
@@ -2283,7 +2125,7 @@ export default function App() {
                       />
                       <span>{t.hasElevator}</span>
                     </label>
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={hasGenerator}
@@ -2292,7 +2134,7 @@ export default function App() {
                       />
                       <span>{t.hasGenerator}</span>
                     </label>
-                    <label className="flex items-center space-x-2 space-x-reverse cursor-pointer text-slate-300 select-none">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-slate-300 select-none">
                       <input
                         type="checkbox"
                         checked={hasSolarPower}
@@ -2325,7 +2167,7 @@ export default function App() {
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                         <span className="text-xl">📸</span>
-                        <span className="text-[10px] text-slate-400 mt-1">
+                        <span className="text-xs text-slate-400 mt-1">
                           اضغط للتحديد أو اسحب الصور هنا
                         </span>
                         <span className="text-[9px] text-[#F27D26]/60 mt-0.5">
@@ -2343,7 +2185,7 @@ export default function App() {
                           placeholder="https://images.unsplash.com/photo-..."
                           value={newImageUrl}
                           onChange={(e) => setNewImageUrl(e.target.value)}
-                          className="w-full rounded-xl border border-white/5 bg-slate-950 px-3.5 py-2 text-[10px] text-white placeholder-slate-600 outline-none font-mono"
+                          className="w-full rounded-xl border border-white/5 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-600 outline-none font-mono"
                         />
                       </div>
 
@@ -2391,7 +2233,7 @@ export default function App() {
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                         <span className="text-xl">🎥</span>
-                        <span className="text-[10px] text-slate-400 mt-1">
+                        <span className="text-xs text-slate-400 mt-1">
                           اضغط لتحديد فيديو جولة عقارية أو اسحبه هنا
                         </span>
                         <span className="text-[9px] text-[#F27D26]/60 mt-0.5">
@@ -2409,7 +2251,7 @@ export default function App() {
                           placeholder="https://youtube.com/watch?v=..."
                           value={newVideoUrl}
                           onChange={(e) => setNewVideoUrl(e.target.value)}
-                          className="w-full rounded-xl border border-white/5 bg-slate-950 px-3.5 py-2 text-[10px] text-white placeholder-slate-600 outline-none font-mono"
+                          className="w-full rounded-xl border border-white/5 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-600 outline-none font-mono"
                         />
                       </div>
 
@@ -2424,7 +2266,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setUploadedVideo("")}
-                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded"
+                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-2 py-1 rounded"
                           >
                             حذف الفيديو
                           </button>
@@ -2442,7 +2284,7 @@ export default function App() {
                       : "Property Documents (Optional)"}
                   </h4>
                   <div className="bg-slate-900/40 border border-white/5 rounded-xl p-4">
-                    <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">
+                    <p className="text-xs text-slate-400 mb-3 leading-relaxed">
                       {lang === "ar"
                         ? "يمكنك رفع سند الملكية، خارطة العقار، إجازة البناء، أو أي مستندات أخرى (لا يظهر للعامة إلا بموافقتك)."
                         : "Upload property deeds, maps, or building permits. Hidden from public by default."}
@@ -2465,7 +2307,7 @@ export default function App() {
                               newDocs[idx].title = e.target.value;
                               setNewDocuments(newDocs);
                             }}
-                            className="flex-1 rounded border border-white/5 bg-slate-900 px-2 py-1 text-[10px] text-white outline-none"
+                            className="flex-1 rounded border border-white/5 bg-slate-900 px-2 py-1 text-xs text-white outline-none"
                           />
                           <input
                             type="text"
@@ -2476,7 +2318,7 @@ export default function App() {
                               newDocs[idx].url = e.target.value;
                               setNewDocuments(newDocs);
                             }}
-                            className="flex-1 rounded border border-white/5 bg-slate-900 px-2 py-1 text-[10px] text-white outline-none font-mono"
+                            className="flex-1 rounded border border-white/5 bg-slate-900 px-2 py-1 text-xs text-white outline-none font-mono"
                           />
                           <label className="flex items-center gap-1 text-[9px] text-slate-400 cursor-pointer">
                             <input
@@ -2530,7 +2372,7 @@ export default function App() {
 
                   <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.advertiserNameLabel}
                       </label>
                       <input
@@ -2542,7 +2384,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label className="block text-xs text-slate-400 mb-1">
                         {t.advertiserPhoneLabel}
                       </label>
                       <input
@@ -2555,7 +2397,7 @@ export default function App() {
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[10px] text-slate-400">
+                        <label className="block text-xs text-slate-400">
                           {t.advertiserWhatsappLabel}
                         </label>
                         {advertiserPhone && (
@@ -2594,12 +2436,6 @@ export default function App() {
                     <option value="abdullah_daas">
                       عبدالله الدعاس (المدير العام لشركة عدن)
                     </option>
-                    <option value="ali_jassim">
-                      علي جاسم الكربولي (مستشار الأنبار)
-                    </option>
-                    <option value="zahra_salah">
-                      زهراء صلاح الجبوري (مستشارة بغداد)
-                    </option>
                   </select>
                 </div>
 
@@ -2637,7 +2473,7 @@ export default function App() {
           <div className="relative w-full max-w-md h-full bg-[#050505] border-r border-white/10 p-6 flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <Heart className="h-5.5 w-5.5 fill-[#F27D26] text-[#F27D26]" />
                   <h3 className="text-base font-bold text-white">
                     {t.favoriteProperties}
@@ -2673,7 +2509,7 @@ export default function App() {
                       <h4 className="text-xs font-bold text-white truncate group-hover:text-[#F27D26] transition-colors">
                         {prop.title}
                       </h4>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                      <p className="text-xs text-slate-400 truncate mt-0.5">
                         📍 {prop.governorate} • {prop.district}
                       </p>
                       <span className="text-xs text-[#F27D26] font-bold block font-sans mt-0.5">

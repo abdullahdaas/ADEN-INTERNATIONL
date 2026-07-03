@@ -13,11 +13,10 @@
   --color-gold-accent: #ff8a3d;
 }
 
-body {
+html, body { overflow-x: hidden; max-width: 100vw; width: 100%; overflow-wrap: break-word; 
   background-color: var(--color-royal-dark);
   color: #f3f4f6;
   font-family: var(--font-sans);
-  direction: rtl;
 }
 
 /* Custom Webkit scrollbar for premium theme styling */
@@ -78,5 +77,24 @@ body {
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+
+
+#root {
+  overflow-x: hidden;
+  width: 100%; overflow-wrap: break-word;
+}
+
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm;
+  }
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
 }
 

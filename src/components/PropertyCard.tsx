@@ -77,7 +77,7 @@ export default function PropertyCard({
       )}
 
       {/* Image Container */}
-      <div className="relative h-56 w-full overflow-hidden bg-slate-950">
+      <div className="relative h-64 w-full overflow-hidden bg-slate-950">
         <img
           src={property.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&auto=format&fit=crop&q=80'}
           alt={property.title}
@@ -90,11 +90,11 @@ export default function PropertyCard({
 
         {/* Badges Column */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
-          <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${statusStyle.bg} ${statusStyle.text} backdrop-blur-md`}>
+          <span className={`rounded-lg px-2.5 py-1 text-sm font-bold ${statusStyle.bg} ${statusStyle.text} backdrop-blur-md`}>
             {property.status}
           </span>
           {property.isFeatured && (
-            <span className="rounded-lg bg-gold-prestige/95 px-2.5 py-1 text-xs font-black text-white shadow-md animate-pulse">
+            <span className="rounded-lg bg-gold-prestige/95 px-2.5 py-1 text-sm font-black text-white shadow-md animate-pulse">
               إعلان مميز ⭐
             </span>
           )}
@@ -132,12 +132,12 @@ export default function PropertyCard({
         </div>
 
         {/* Property Type Badge */}
-        <div className="absolute bottom-3 right-4 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-slate-300 backdrop-blur-xs">
+        <div className="absolute bottom-3 right-4 rounded bg-black/60 px-2 py-0.5 text-sm font-medium text-slate-300 backdrop-blur-xs">
           {property.buildingType}
         </div>
 
         {/* Date / Day badge */}
-        <div className="absolute bottom-3 left-4 flex items-center space-x-1 space-x-reverse rounded bg-black/60 px-2 py-0.5 text-[10px] font-mono text-slate-300 backdrop-blur-xs">
+        <div className="absolute bottom-3 left-4 flex items-center gap-2 rounded bg-black/60 px-2 py-0.5 text-sm font-mono text-slate-300 backdrop-blur-xs">
           <Eye className="h-3 w-3 text-gold-prestige" />
           <span>{property.views} مشاهدة</span>
         </div>
@@ -148,36 +148,36 @@ export default function PropertyCard({
         
         {/* Price & Area */}
         <div className="flex items-baseline justify-between mb-2">
-          <span className="text-lg font-extrabold text-gold-prestige font-sans">
+          <span className="text-xl font-extrabold text-gold-prestige font-sans">
             {formatPrice(property.price, property.status)}
           </span>
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-sm font-medium text-slate-400">
             {property.space} م²
           </span>
         </div>
 
         {/* Title */}
-        <h3 className="line-clamp-1 text-sm font-bold text-white group-hover:text-gold-prestige transition-colors mb-1.5" title={property.title}>
+        <h3 className="line-clamp-1 text-base font-bold text-white group-hover:text-gold-prestige transition-colors mb-1.5" title={property.title}>
           {property.title}
         </h3>
 
         {/* Location Info */}
-        <p className="line-clamp-1 text-xs text-slate-400 mb-4 flex items-center gap-1">
+        <p className="line-clamp-1 text-sm text-slate-400 mb-4 flex items-center gap-1">
           <span className="text-gold-prestige font-black">📍</span>
           <span>{property.governorate} • {property.district} • {property.neighborhood}</span>
         </p>
 
         {/* Specifications Icons */}
-        <div className="mt-auto grid grid-cols-3 gap-2 border-t border-white/5 pt-3.5 mb-4 text-xs text-slate-300 font-medium">
-          <div className="flex items-center justify-center space-x-1.5 space-x-reverse rounded-lg bg-white/5 py-1.5" title="غرف النوم">
+        <div className="mt-auto grid grid-cols-3 gap-2 border-t border-white/5 pt-3.5 mb-4 text-sm text-slate-300 font-medium">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-1.5" title="غرف النوم">
             <Bed className="h-3.5 w-3.5 text-gold-prestige" />
             <span>{property.bedrooms || '—'} غرف</span>
           </div>
-          <div className="flex items-center justify-center space-x-1.5 space-x-reverse rounded-lg bg-white/5 py-1.5" title="الحمامات">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-1.5" title="الحمامات">
             <Bath className="h-3.5 w-3.5 text-gold-prestige" />
             <span>{property.bathrooms || '—'} حمام</span>
           </div>
-          <div className="flex items-center justify-center space-x-1.5 space-x-reverse rounded-lg bg-white/5 py-1.5" title="المساحة">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-1.5" title="المساحة">
             <Move className="h-3.5 w-3.5 text-gold-prestige" />
             <span>{property.space} م²</span>
           </div>
@@ -188,7 +188,7 @@ export default function PropertyCard({
           <button
             id={`btn-call-agent-${property.id}`}
             onClick={handleCall}
-            className="flex items-center justify-center space-x-1.5 space-x-reverse rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-bold text-slate-300 transition-all hover:bg-white/10 hover:text-white"
+            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-bold text-slate-300 transition-all hover:bg-white/10 hover:text-white"
           >
             <Phone className="h-3.5 w-3.5" />
             <span>اتصال</span>
@@ -196,7 +196,7 @@ export default function PropertyCard({
           <button
             id={`btn-whatsapp-agent-${property.id}`}
             onClick={handleWhatsapp}
-            className="flex items-center justify-center space-x-1.5 space-x-reverse rounded-xl bg-emerald-600/90 py-2 text-xs font-bold text-white transition-all hover:bg-emerald-600 hover:shadow-md hover:shadow-emerald-600/15"
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600/90 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 hover:shadow-md hover:shadow-emerald-600/15"
           >
             <MessageCircle className="h-3.5 w-3.5" />
             <span>واتساب</span>

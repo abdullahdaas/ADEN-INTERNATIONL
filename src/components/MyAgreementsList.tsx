@@ -110,7 +110,7 @@ export default function MyAgreementsList({
                   </p>
                 </div>
 
-                <div className="flex gap-8 text-sm">
+                <div className="flex flex-wrap gap-4 sm:gap-8 text-sm">
                   <div>
                     <span className="block text-slate-500 text-xs mb-1">
                       البائع

@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
+import fs from 'fs';
+// Removed top level vite import
 import { db } from './src/data/db';
 import { INITIAL_PROPERTIES, INITIAL_AGENTS, INITIAL_DEALS } from './src/data/mockData';
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog } from './src/types';
@@ -11,7 +12,6 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 
 // In-memory OTP Cache
-const activeOTPs = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
 // Load database or seed it
 async function seedDatabase() {
@@ -47,114 +47,6 @@ seedDatabase();
 // --- REST API ENDPOINTS ---
 
 // OTP Endpoints
-app.post('/api/otp/send', async (req, res) => {
-  const { phone } = req.body;
-  if (!phone || !/^(\+?\d{8,15})$/.test(phone)) {
-    return res.status(400).json({ success: false, message: 'يرجى إدخال رقم هاتف صحيح.' });
-  }
-
-  const code = Math.floor(1000 + Math.random() * 9000).toString();
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-
-  const existing = activeOTPs.get(phone);
-  if (existing && existing.expiresAt - Date.now() > 4 * 60 * 1000) {
-     return res.status(429).json({ success: false, message: 'يرجى الانتظار قبل طلب رمز جديد.' });
-  }
-
-  activeOTPs.set(phone, { code, expiresAt, attempts: 0 });
-
-  await db.otpLogs.add({
-    id: 'otp-' + Date.now(),
-    phone,
-    status: 'success',
-    attempts: 0,
-    createdAt: new Date().toISOString()
-  });
-
-  const settings = await db.settings.get();
-  if (settings.isOtpEnabled && settings.smsProvider !== 'mock') {
-    console.log(`[REAL SMS VIA ${settings.smsProvider}] Sending OTP ${code} to ${phone}`);
-  } else {
-    console.log(`[MOCK OTP] Code for ${phone} is: ${code}`);
-  }
-
-  res.json({ success: true, message: 'تم إرسال رمز التحقق بنجاح.' });
-});
-
-app.post('/api/otp/verify', async (req, res) => {
-  const { phone, code, name } = req.body;
-  const settings = await db.settings.get();
-  
-  if (!phone || (!code && settings.isOtpEnabled)) {
-    return res.status(400).json({ success: false, message: 'رقم الهاتف والرمز مطلوبان.' });
-  }
-
-  if (settings.isOtpEnabled) {
-    const otpData = activeOTPs.get(phone);
-    const logs = await db.otpLogs.getAll();
-    const logEntry = logs.find(l => l.phone === phone && l.status === 'success');
-
-    if (!otpData) {
-      return res.status(400).json({ success: false, message: 'لا توجد عملية تحقق نشطة لهذا الرقم.' });
-    }
-
-    if (Date.now() > otpData.expiresAt) {
-      activeOTPs.delete(phone);
-      if (logEntry) await db.otpLogs.update(logEntry.id!, { status: 'expired' });
-      return res.status(400).json({ success: false, message: 'انتهت صلاحية الرمز، يرجى طلب رمز جديد.' });
-    }
-
-    if (otpData.attempts >= 5) {
-      activeOTPs.delete(phone);
-      if (logEntry) await db.otpLogs.update(logEntry.id!, { status: 'failed' });
-      return res.status(403).json({ success: false, message: 'تم تجاوز الحد الأقصى للمحاولات، يرجى طلب رمز جديد.' });
-    }
-
-    if (otpData.code !== code) {
-      otpData.attempts += 1;
-      if (logEntry) await db.otpLogs.update(logEntry.id!, { attempts: otpData.attempts });
-      return res.status(400).json({ success: false, message: 'الرمز غير صحيح.' });
-    }
-
-    activeOTPs.delete(phone);
-  }
-
-  const profiles = await db.profiles.getAll();
-  let profile = profiles.find(p => p.emailOrPhone.trim().toLowerCase() === phone.trim().toLowerCase());
-  
-  if (profile) {
-    if (profile.status === 'banned') return res.status(403).json({ success: false, message: `هذا الحساب محظور.` });
-    if (profile.status === 'suspended') return res.status(403).json({ success: false, message: 'هذا الحساب معطل مؤقتاً.' });
-  } else {
-    profile = {
-      id: 'user-' + Date.now(),
-      emailOrPhone: phone.trim().toLowerCase(),
-      name: name || 'مستخدم جديد',
-      whatsapp: '',
-      phone: phone.trim(),
-      avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&q=80',
-      coverImage: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80',
-      bio: '',
-      customSlug: `user-${Date.now()}`,
-      isVerified: true,
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      role: 'citizen'
-    };
-    await db.profiles.add(profile);
-  }
-
-  await db.activityLogs.add({
-    id: 'log-' + Date.now(),
-    userId: profile.emailOrPhone,
-    action: 'LOGIN',
-    details: 'تسجيل دخول ناجح عبر OTP',
-    timestamp: new Date().toISOString()
-  });
-
-  const { password, ...safeProfile } = profile;
-  res.json({ success: true, profile: safeProfile });
-});
 
 app.post('/api/citizen-login', async (req, res) => {
   const { emailOrPhone, password, name } = req.body;
@@ -258,7 +150,11 @@ app.get('/api/agreements', async (req, res) => {
 app.post('/api/agreements', async (req, res) => {
   try {
     const agreement = req.body;
-    agreement.id = Date.now().toString(36) + Math.random().toString(36).substr(2); // UUID-like
+    const timestampId = Date.now().toString(36);
+    const randomHex = Math.random().toString(16).substring(2, 10);
+    
+    agreement.id = `agr_${timestampId}_${randomHex}`; 
+    agreement.serialNumber = `ADN-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
     agreement.createdAt = new Date().toISOString();
     agreement.status = 'pending_approval';
     await db.agreements.add(agreement);
@@ -299,10 +195,7 @@ app.put('/api/settings', async (req, res) => {
   res.json(await db.settings.get());
 });
 
-app.get('/api/otp/logs', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({success: false, message: 'Unauthorized'});
-  res.json(await db.otpLogs.getAll());
-});
+
 
 // Part 1
 
@@ -1056,7 +949,8 @@ app.get('/api/stats', async (req, res) => {
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY) {
+  if (process.env.NODE_ENV !== 'production' && !fs.existsSync(path.join(process.cwd(), 'dist', 'index.html')) && !process.env.NETLIFY) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

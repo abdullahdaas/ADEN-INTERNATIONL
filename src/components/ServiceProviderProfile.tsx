@@ -116,7 +116,7 @@ export default function ServiceProviderProfile({
         </div>
 
         {/* Content Tabs */}
-        <div className="mt-12 border-b border-white/5 flex gap-8">
+        <div className="mt-12 border-b border-white/5 flex gap-8 overflow-x-auto">
           {[
             { id: "about", label: "عن الشركة" },
             { id: "portfolio", label: "معرض الأعمال" },

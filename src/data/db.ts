@@ -1,16 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog, ElectronicAgreement } from '../types';
-
-const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-let firebaseConfig: any = {};
-try {
-  firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-} catch (e) {
-  console.error("Could not load firebase-applet-config.json");
-}
+import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);

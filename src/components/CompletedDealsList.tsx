@@ -13,7 +13,7 @@ export default function CompletedDealsList({ deals }: CompletedDealsListProps) {
       
       {/* Section Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3 space-x-reverse">
+        <div className="flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <BadgeCheck className="h-5.5 w-5.5" />
           </div>
@@ -22,7 +22,7 @@ export default function CompletedDealsList({ deals }: CompletedDealsListProps) {
             <p className="text-xs text-slate-400 font-sans">عمليات البيع والتأجير الموثقة مؤخراً عبر المنصة</p>
           </div>
         </div>
-        <div className="flex items-center space-x-1.5 space-x-reverse rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+        <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
           <TrendingUp className="h-3.5 w-3.5" />
           <span>تحديث مباشر</span>
         </div>
@@ -46,7 +46,7 @@ export default function CompletedDealsList({ deals }: CompletedDealsListProps) {
                 <div className={`absolute top-3 left-3 h-2 w-2 rounded-full ${isSale ? 'bg-emerald-500' : 'bg-blue-500'} animate-pulse`}></div>
 
                 <div>
-                  <div className="flex items-center space-x-2 space-x-reverse mb-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                       isSale ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
                     }`}>

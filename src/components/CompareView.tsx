@@ -95,12 +95,12 @@ export default function CompareView({
 
       {/* Table Container */}
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/40">
-        <table className="w-full text-center text-sm border-collapse min-w-[600px]">
+        <table className="w-full text-center text-sm border-collapse ">
           <thead>
             <tr className="border-b border-white/10 bg-slate-950 text-slate-300">
               <th className="py-4 px-4 font-bold text-right w-44">المواصفة / العقار</th>
               {properties?.map((p) => (
-                <th key={p.id} className="py-4 px-4 font-bold relative min-w-[200px]">
+                <th key={p.id} className="py-4 px-4 font-bold relative ">
                   {/* Remove Button */}
                   <button
                     onClick={() => onRemove(p.id)}

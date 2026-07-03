@@ -537,7 +537,7 @@ export default function AdminPortal({
       <div className="lg:col-span-1 space-y-4">
         <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-5 space-y-6">
           {/* Header Title */}
-          <div className="flex items-center space-x-3 space-x-reverse">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
               <Shield className="h-5 w-5" />
             </div>
@@ -545,7 +545,7 @@ export default function AdminPortal({
               <h3 className="text-sm font-extrabold text-white">
                 {adminUser?.name || "عبدالله الدعاس"}
               </h3>
-              <p className="text-[10px] text-red-400 font-sans mt-0.5">
+              <p className="text-xs text-red-400 font-sans mt-0.5">
                 {adminUser?.isSupervisor
                   ? "مشرف المنصة المعتمد"
                   : "المدير العام للمنصة"}
@@ -564,7 +564,7 @@ export default function AdminPortal({
                   : "text-slate-300 hover:bg-white/5"
               }`}
             >
-              <div className="flex items-center space-x-2.5 space-x-reverse">
+              <div className="flex flex-wrap items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span>لوحة التحكم الرئيسية</span>
               </div>
@@ -584,7 +584,7 @@ export default function AdminPortal({
                     : "text-slate-300 hover:bg-white/5"
                 }`}
               >
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   <span>إدارة طلبات العقارات</span>
                 </div>
@@ -607,7 +607,7 @@ export default function AdminPortal({
                     : "text-slate-300 hover:bg-white/5"
                 }`}
               >
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   <span>الخريطة الإدارية الشاملة</span>
                 </div>
@@ -625,7 +625,7 @@ export default function AdminPortal({
                     : "text-slate-300 hover:bg-white/5"
                 }`}
               >
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   <span>صندوق الوارد الإداري</span>
                 </div>
@@ -648,7 +648,7 @@ export default function AdminPortal({
                     : "text-slate-300 hover:bg-white/5"
                 }`}
               >
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   <span>التحققات وإثباتات الدفع</span>
                 </div>
@@ -671,7 +671,7 @@ export default function AdminPortal({
                     : "text-slate-300 hover:bg-white/5"
                 }`}
               >
-                <div className="flex items-center space-x-2.5 space-x-reverse">
+                <div className="flex flex-wrap items-center gap-2">
                   <Map className="h-4 w-4" />
                   <span>إدارة المخطط الجغرافي</span>
                 </div>
@@ -689,7 +689,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span>إدارة المستخدمين</span>
                   </div>
@@ -703,23 +703,9 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <History className="h-4 w-4" />
                     <span>سجل النشاطات</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setAdminView("otp")}
-                  className={`w-full flex items-center justify-between rounded-lg px-4 py-3 font-semibold transition-all ${
-                    adminView === "otp"
-                      ? "bg-white/5 text-gold-prestige"
-                      : "text-slate-300 hover:bg-white/5"
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
-                    <Shield className="h-4 w-4" />
-                    <span>إعدادات التحقق (OTP)</span>
                   </div>
                 </button>
 
@@ -731,7 +717,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Banknote className="h-4 w-4" />
                     <span>المالية والإيرادات</span>
                   </div>
@@ -744,7 +730,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
                     <span>التحليلات والإحصائيات</span>
                   </div>
@@ -757,7 +743,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>إدارة المحتوى (CMS)</span>
                   </div>
@@ -770,7 +756,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Star className="h-4 w-4" />
                     <span>إدارة الإعلانات</span>
                   </div>
@@ -783,7 +769,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     <span>الخدمات العقارية</span>
                   </div>
@@ -796,7 +782,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <FileSignature className="h-4 w-4" />
                     <span>المكاتبات الإلكترونية</span>
                   </div>
@@ -809,11 +795,11 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Banknote className="h-4 w-4" />
                     <span>طلبات دفع المكاتبات</span>
                   </div>
-                  <span className="bg-[#F27D26] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  <span className="bg-[#F27D26] text-white text-xs font-bold px-1.5 py-0.5 rounded">
                     جديد
                   </span>
                 </button>
@@ -825,7 +811,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <ShieldAlert className="h-4 w-4" />
                     <span>الإعدادات العامة</span>
                   </div>
@@ -839,7 +825,7 @@ export default function AdminPortal({
                       : "text-slate-300 hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 space-x-reverse">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Shield className="h-4 w-4 text-[#F27D26]" />
                     <span className="text-[#F27D26]">
                       إدارة المشرفين والترميز
@@ -856,7 +842,7 @@ export default function AdminPortal({
           </nav>
 
           {/* Quick Stats overview */}
-          <div className="border-t border-white/5 pt-4 space-y-2 text-[11px] text-slate-400">
+          <div className="border-t border-white/5 pt-4 space-y-2 text-xs text-slate-400">
             <p className="flex justify-between">
               <span>نشط عام في المنصة:</span>
               <span className="font-bold text-white font-mono">
@@ -872,7 +858,7 @@ export default function AdminPortal({
           {/* Logout Trigger */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 space-x-reverse rounded-xl bg-red-600/10 border border-red-500/20 hover:bg-red-600 hover:text-white py-2.5 text-xs font-bold text-red-400 transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-600/10 border border-red-500/20 hover:bg-red-600 hover:text-white py-2.5 text-xs font-bold text-red-400 transition-all cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             <span>خروج من لوحة التحكم</span>
@@ -944,7 +930,7 @@ export default function AdminPortal({
                     key={deal.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950/40 border border-white/5 text-xs text-slate-300 gap-2"
                   >
-                    <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`h-2 w-2 rounded-full ${deal.type === "بيع" ? "bg-emerald-500" : "bg-blue-500"}`}
                       ></span>
@@ -955,7 +941,7 @@ export default function AdminPortal({
                         ({deal.governorate} • {deal.district})
                       </span>
                     </div>
-                    <div className="flex items-center space-x-3 space-x-reverse font-mono text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
                       <span className="text-gold-prestige font-bold">
                         {formatPrice(
                           deal.price,
@@ -1015,10 +1001,10 @@ export default function AdminPortal({
                         >
                           {p.isApproved ? "منشور ونشط" : "بانتظار المراجعة"}
                         </span>
-                        <span className="text-[10px] text-gold-prestige font-extrabold">
+                        <span className="text-xs text-gold-prestige font-extrabold">
                           {formatPrice(p.price, p.status)}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-sans">
+                        <span className="text-xs text-slate-500 font-sans">
                           {p.buildingType} • {p.space} م²
                         </span>
                       </div>
@@ -1086,7 +1072,7 @@ export default function AdminPortal({
             <h2 className="text-xl font-bold text-white mb-6">عروض الشراء</h2>
             <div className="bg-slate-950/50 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
               <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
+                <table className="w-full  text-right text-xs">
                   <thead>
                     <tr className="border-b border-white/5 text-slate-400">
                       <th className="py-3 px-4 font-normal">العقار</th>
@@ -1107,12 +1093,12 @@ export default function AdminPortal({
                         <td className="py-3 px-4 font-bold text-gold-prestige">
                           {o.amount.toLocaleString("ar-IQ")} د.ع
                         </td>
-                        <td className="py-3 px-4 text-[10px]">
+                        <td className="py-3 px-4 text-xs">
                           {o.message || "-"}
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`px-2 py-1 rounded text-[10px] ${o.status === "pending" ? "bg-amber-500/20 text-amber-500" : o.status === "accepted" ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"}`}
+                            className={`px-2 py-1 rounded text-xs ${o.status === "pending" ? "bg-amber-500/20 text-amber-500" : o.status === "accepted" ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"}`}
                           >
                             {o.status === "pending"
                               ? "قيد الانتظار"
@@ -1148,13 +1134,13 @@ export default function AdminPortal({
                         {c.subject}
                       </h3>
                       <span
-                        className={`px-2 py-1 rounded text-[10px] ${c.status === "open" ? "bg-amber-500/20 text-amber-500" : c.status === "closed" ? "bg-slate-500/20 text-slate-400" : "bg-blue-500/20 text-blue-400"}`}
+                        className={`px-2 py-1 rounded text-xs ${c.status === "open" ? "bg-amber-500/20 text-amber-500" : c.status === "closed" ? "bg-slate-500/20 text-slate-400" : "bg-blue-500/20 text-blue-400"}`}
                       >
                         {c.status}
                       </span>
                     </div>
                     <p className="text-xs text-slate-300">{c.description}</p>
-                    <div className="flex justify-between text-[10px] text-slate-500">
+                    <div className="flex justify-between text-xs text-slate-500">
                       <span>
                         المرسل: {c.reporterName} ({c.reporterId})
                       </span>
@@ -1173,7 +1159,7 @@ export default function AdminPortal({
                             loadAdminData();
                           } catch (e) {}
                         }}
-                        className="mt-2 px-3 py-1 bg-slate-800 text-white rounded text-[10px] hover:bg-slate-700"
+                        className="mt-2 px-3 py-1 bg-slate-800 text-white rounded text-xs hover:bg-slate-700"
                       >
                         إغلاق الشكوى
                       </button>
@@ -1237,9 +1223,9 @@ export default function AdminPortal({
                     className={`p-5 rounded-2xl border border-white/5 bg-slate-950/40 space-y-3 relative ${!m.isRead ? "border-r-4 border-r-gold-prestige" : ""}`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center space-x-2 space-x-reverse">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${style.color}`}
+                          className={`text-xs font-bold px-2 py-0.5 rounded ${style.color}`}
                         >
                           {style.label}
                         </span>
@@ -1250,7 +1236,7 @@ export default function AdminPortal({
                           ({m.phone})
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500">
+                      <span className="text-xs font-mono text-slate-500">
                         {m.createdAt?.split("T")?.[0] || ""}
                       </span>
                     </div>
@@ -1260,7 +1246,7 @@ export default function AdminPortal({
                     </p>
 
                     {m.propertyId && (
-                      <div className="text-[11px] text-slate-400 font-sans bg-slate-900/40 p-2 rounded">
+                      <div className="text-xs text-slate-400 font-sans bg-slate-900/40 p-2 rounded">
                         مرفق برقم العقار:{" "}
                         <span className="font-bold text-white font-mono">
                           {m.propertyId}
@@ -1278,7 +1264,7 @@ export default function AdminPortal({
                           تم القراءة ومعالجة الطلب
                         </button>
                       ) : (
-                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
                           <Check className="h-3.5 w-3.5 text-emerald-400" />
                           <span>تم الاطلاع والمعالجة</span>
                         </span>
@@ -1372,9 +1358,9 @@ export default function AdminPortal({
                   className="p-5 rounded-2xl border border-white/5 bg-slate-950/40 space-y-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
-                    <div className="flex items-center space-x-2.5 space-x-reverse text-xs">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        className={`text-xs font-bold px-2 py-0.5 rounded ${
                           pay.status === "pending"
                             ? "bg-amber-500/10 text-amber-400"
                             : pay.status === "approved"
@@ -1465,7 +1451,7 @@ export default function AdminPortal({
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-xs text-slate-500">
                           تم حسم المعاملة وأرشفتها.
                         </span>
                       )}
@@ -1492,7 +1478,7 @@ export default function AdminPortal({
             </h2>
             <div className="bg-slate-950/50 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
               <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
+                <table className="w-full  text-right text-xs">
                   <thead>
                     <tr className="border-b border-white/5 text-slate-400">
                       <th className="py-3 px-4 font-normal">العقار</th>
@@ -1521,7 +1507,7 @@ export default function AdminPortal({
                         <td className="py-3 px-4 font-mono">{v.ownerId}</td>
                         <td className="py-3 px-4">
                           <span
-                            className={`px-2 py-1 rounded text-[10px] ${v.status === "pending" ? "bg-amber-500/20 text-amber-500" : v.status === "accepted" ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"}`}
+                            className={`px-2 py-1 rounded text-xs ${v.status === "pending" ? "bg-amber-500/20 text-amber-500" : v.status === "accepted" ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"}`}
                           >
                             {v.status === "pending"
                               ? "قيد الانتظار"
@@ -1560,7 +1546,7 @@ export default function AdminPortal({
                       <h3 className="text-white font-bold text-sm">
                         {p.title}
                       </h3>
-                      <div className="flex justify-between text-[10px]">
+                      <div className="flex justify-between text-xs">
                         <span className="text-slate-400">
                           الحالة:{" "}
                           {p.isAuctionActive ? (
@@ -1574,7 +1560,7 @@ export default function AdminPortal({
                           {p.startingPrice?.toLocaleString("ar-IQ")} د.ع
                         </span>
                       </div>
-                      <div className="flex justify-between text-[10px] bg-black/40 p-2 rounded">
+                      <div className="flex justify-between text-xs bg-black/40 p-2 rounded">
                         <span className="text-slate-300">
                           أعلى مزايدة:{" "}
                           <span className="text-gold-prestige font-bold text-xs">
@@ -1699,7 +1685,7 @@ export default function AdminPortal({
                     <h4 className="font-bold text-white text-sm">
                       محافظة: {loc.governorate}
                     </h4>
-                    <div className="mr-4 space-y-1 text-slate-400 text-[11px]">
+                    <div className="mr-4 space-y-1 text-slate-400 text-xs">
                       {loc.districts?.map((d) => (
                         <p key={d.name}>
                           قضاء:{" "}
@@ -1868,7 +1854,7 @@ export default function AdminPortal({
                         <h4 className="font-bold text-white text-sm">
                           {sv.name}
                         </h4>
-                        <p className="text-[11px] text-slate-500 font-mono">
+                        <p className="text-xs text-slate-500 font-mono">
                           @{sv.username} • الرمز السري:{" "}
                           <span className="text-slate-300 font-bold">
                             {sv.secretCode}
@@ -1885,7 +1871,7 @@ export default function AdminPortal({
                     </div>
 
                     <div className="border-t border-white/5 pt-2 space-y-1 text-xs">
-                      <p className="text-[11px] text-slate-400 mb-1">
+                      <p className="text-xs text-slate-400 mb-1">
                         الصلاحيات النشطة (اضغط للتبديل):
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -1896,7 +1882,7 @@ export default function AdminPortal({
                               "approveProperties",
                             )
                           }
-                          className={`cursor-pointer text-[10px] px-2 py-0.5 rounded transition-all ${sv.permissions.approveProperties ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
+                          className={`cursor-pointer text-xs px-2 py-0.5 rounded transition-all ${sv.permissions.approveProperties ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
                         >
                           الموافقة والنشر
                         </span>
@@ -1907,7 +1893,7 @@ export default function AdminPortal({
                               "manageLocations",
                             )
                           }
-                          className={`cursor-pointer text-[10px] px-2 py-0.5 rounded transition-all ${sv.permissions.manageLocations ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
+                          className={`cursor-pointer text-xs px-2 py-0.5 rounded transition-all ${sv.permissions.manageLocations ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
                         >
                           المخطط الجغرافي
                         </span>
@@ -1915,7 +1901,7 @@ export default function AdminPortal({
                           onClick={() =>
                             handleToggleSupervisorPermission(sv, "manageInbox")
                           }
-                          className={`cursor-pointer text-[10px] px-2 py-0.5 rounded transition-all ${sv.permissions.manageInbox ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
+                          className={`cursor-pointer text-xs px-2 py-0.5 rounded transition-all ${sv.permissions.manageInbox ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
                         >
                           صندوق الوارد
                         </span>
@@ -1926,7 +1912,7 @@ export default function AdminPortal({
                               "managePayments",
                             )
                           }
-                          className={`cursor-pointer text-[10px] px-2 py-0.5 rounded transition-all ${sv.permissions.managePayments ? "bg-emerald-500/20 text-[#F27D26] border border-[#F27D26]/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
+                          className={`cursor-pointer text-xs px-2 py-0.5 rounded transition-all ${sv.permissions.managePayments ? "bg-emerald-500/20 text-[#F27D26] border border-[#F27D26]/30" : "bg-slate-900 text-slate-500 border border-white/5 line-through"}`}
                         >
                           الدفعات والتمويل
                         </span>
@@ -1951,7 +1937,7 @@ export default function AdminPortal({
             </h2>
             <div className="bg-slate-950/50 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
               <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
+                <table className="w-full  text-right text-xs">
                   <thead>
                     <tr className="border-b border-white/5 text-slate-400">
                       <th className="py-3 px-4 font-normal">الاسم</th>
@@ -1998,7 +1984,7 @@ export default function AdminPortal({
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] ${
+                            className={`px-2 py-0.5 rounded text-xs ${
                               p.status === "banned"
                                 ? "bg-rose-500/20 text-rose-400"
                                 : p.status === "suspended"
@@ -2084,7 +2070,7 @@ export default function AdminPortal({
             </h2>
             <div className="bg-slate-950/50 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
               <div className="overflow-x-auto max-h-[70vh]">
-                <table className="w-full text-right text-xs">
+                <table className="w-full  text-right text-xs">
                   <thead>
                     <tr className="border-b border-white/5 text-slate-400">
                       <th className="py-3 px-4 font-normal">الوقت</th>
@@ -2099,7 +2085,7 @@ export default function AdminPortal({
                       .reverse()
                       ?.map((l) => (
                         <tr key={l.id} className="text-slate-300">
-                          <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono text-[10px]">
+                          <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono text-xs">
                             {new Date(l.timestamp).toLocaleString("ar-IQ")}
                           </td>
                           <td className="py-3 px-4 font-mono text-emerald-400">
@@ -2115,175 +2101,6 @@ export default function AdminPortal({
                       ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {adminView === "otp" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-white mb-6">
-              إعدادات التحقق (OTP)
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-white/5 bg-slate-900 p-6 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-[#F27D26]" />
-                  مزود خدمة رسائل SMS
-                </h3>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1.5">
-                    حالة النظام (تمكين أو تعطيل التحقق الحقيقي)
-                  </label>
-                  <select
-                    value={settings.isOtpEnabled ? "true" : "false"}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        isOtpEnabled: e.target.value === "true",
-                      })
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none"
-                  >
-                    <option value="true">مُفَعّل (Enabled)</option>
-                    <option value="false">
-                      مُعَطّل (Disabled - يسمح بأي رمز)
-                    </option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1.5">
-                    مزود الخدمة (Provider)
-                  </label>
-                  <select
-                    value={settings.smsProvider}
-                    onChange={(e) =>
-                      setSettings({ ...settings, smsProvider: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none"
-                  >
-                    <option value="mock">
-                      محاكي التطوير (Mock OTP - يظهر في السجلات فقط)
-                    </option>
-                    <option value="twilio">Twilio API (حقيقي)</option>
-                    <option value="generic">مزود آخر (Generic API)</option>
-                  </select>
-                </div>
-                {(settings.smsProvider === "twilio" ||
-                  settings.smsProvider === "generic") && (
-                  <>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">
-                        مفتاح API (API Key)
-                      </label>
-                      <input
-                        type="password"
-                        value={settings.smsApiKey || ""}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            smsApiKey: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">
-                        سر API (API Secret)
-                      </label>
-                      <input
-                        type="password"
-                        value={settings.smsApiSecret || ""}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            smsApiSecret: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1.5">
-                        اسم المرسل (Sender ID)
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.smsSenderId || ""}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            smsSenderId: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none"
-                      />
-                    </div>
-                  </>
-                )}
-                <button
-                  onClick={async () => {
-                    try {
-                      await fetch("/api/settings", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(settings),
-                      });
-                      alert("تم حفظ إعدادات الـ OTP بنجاح!");
-                    } catch (e) {
-                      alert("خطأ في الحفظ");
-                    }
-                  }}
-                  className="rounded-lg bg-[#F27D26] hover:bg-[#ff8a3d] px-4 py-2 text-xs font-bold text-white w-full"
-                >
-                  حفظ إعدادات الـ SMS
-                </button>
-              </div>
-
-              <div className="rounded-2xl border border-white/5 bg-slate-900 p-6">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-                  <History className="w-4 h-4 text-slate-400" />
-                  سجل عمليات إرسال OTP
-                </h3>
-                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                  {otpLogs.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-4">
-                      لا توجد سجلات بعد
-                    </p>
-                  ) : (
-                    otpLogs?.map((log) => (
-                      <div
-                        key={log.id}
-                        className="p-3 rounded-xl border border-white/5 bg-slate-950 flex flex-col gap-1"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className="text-xs font-mono font-bold text-white"
-                            dir="ltr"
-                          >
-                            {log.phone}
-                          </span>
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded font-bold ${log.status === "success" ? "bg-emerald-500/10 text-emerald-400" : log.status === "failed" ? "bg-rose-500/10 text-rose-400" : "bg-amber-500/10 text-amber-400"}`}
-                          >
-                            {log.status === "success"
-                              ? "تم الإرسال (ناجح)"
-                              : log.status === "failed"
-                                ? "محاولة فاشلة"
-                                : "منتهي الصلاحية"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
-                          <span>محاولات: {log.attempts}</span>
-                          <span>
-                            {new Date(log.createdAt).toLocaleString("en-GB")}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
               </div>
             </div>
           </div>
@@ -2362,7 +2179,7 @@ export default function AdminPortal({
                       <span className="block font-bold text-emerald-400">
                         +25,000 د.ع
                       </span>
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-xs text-slate-500">
                         {new Date().toLocaleDateString("ar-IQ")}
                       </span>
                     </div>
@@ -2576,7 +2393,7 @@ export default function AdminPortal({
             </div>
 
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full text-right text-xs">
+              <table className="w-full  text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
                     <th className="py-3 px-4 font-normal">اسم الحملة</th>
@@ -2809,7 +2626,7 @@ export default function AdminPortal({
             </div>
 
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full text-right text-xs">
+              <table className="w-full  text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
                     <th className="py-3 px-4 font-normal">اسم مقدم الخدمة</th>
@@ -2892,7 +2709,7 @@ export default function AdminPortal({
             </div>
 
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full text-right text-xs">
+              <table className="w-full  text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
                     <th className="py-3 px-4 font-normal">رقم الوثيقة</th>
@@ -2969,7 +2786,7 @@ export default function AdminPortal({
             </div>
 
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full text-right text-xs">
+              <table className="w-full  text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
                     <th className="py-3 px-4 font-normal">اسم الدافع</th>
@@ -2996,14 +2813,14 @@ export default function AdminPortal({
                       <td className="py-3 px-4">
                         {req.method === "zain_cash" ? (
                           <span className="flex items-center gap-1.5">
-                            <span className="w-5 h-5 bg-red-500/20 text-red-400 rounded flex items-center justify-center font-bold text-[10px]">
+                            <span className="w-5 h-5 bg-red-500/20 text-red-400 rounded flex items-center justify-center font-bold text-xs">
                               Z
                             </span>
                             زين كاش
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5">
-                            <span className="w-5 h-5 bg-blue-500/20 text-blue-400 rounded flex items-center justify-center font-bold text-[10px]">
+                            <span className="w-5 h-5 bg-blue-500/20 text-blue-400 rounded flex items-center justify-center font-bold text-xs">
                               M
                             </span>
                             ماستر كارد
@@ -3219,7 +3036,7 @@ export default function AdminPortal({
                 </div>
 
                 {/* Amenities checklist */}
-                <div className="flex flex-wrap gap-2 text-[11px] pt-1.5">
+                <div className="flex flex-wrap gap-2 text-xs pt-1.5">
                   {selectedInspectProperty.hasGarage && (
                     <span className="bg-[#F27D26]/10 text-[#F27D26] px-2 py-1 rounded">
                       كراج سيارة

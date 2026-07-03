@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, Heart, MessageSquare, ShieldAlert, GitCompare, Menu, X, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature } from 'lucide-react';
+import { Home, Search, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X } from 'lucide-react';
 import { Property } from '../types';
 import { translations } from '../utils/translations';
 import AdenLogo from './AdenLogo';
@@ -35,8 +35,8 @@ export default function Header({
   onOpenAddProperty,
   onLogout
 }: HeaderProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = translations[lang];
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'home', label: t.home, icon: Home },
@@ -63,22 +63,33 @@ export default function Header({
   };
 
   return (
-    <header id="app-header" className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#050505]/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+    <header id="app-header" className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#050505]/95 backdrop-blur-md">
+      <div className="mx-auto flex flex-wrap max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
         
-        {/* Brand Logo Only - Large, Clear and Beautiful, No side text, Float Animation */}
+        {/* Brand Logo & Name */}
         <div 
-          className="flex cursor-pointer items-center select-none animate-float hover:scale-105 transition-transform duration-300"
+          className="flex cursor-pointer items-center gap-3 select-none"
           onClick={() => setView('home')}
           onDoubleClick={onLogoDoubleClick}
           title={t.doubleClickAdminTip}
         >
           {/* Beautiful calligraphic animated AdenLogo */}
-          <AdenLogo size={85} />
+          <div className="animate-float hover:scale-105 transition-transform duration-300">
+            <AdenLogo size={42} />
+          </div>
+          
+          <div className="flex flex-col">
+            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 font-sans tracking-tight">
+              {t.sloganTitle.split(' ')[0]} {/* "عدن" */}
+            </span>
+            <span className="text-[10px] font-bold text-[#F27D26] tracking-widest font-sans">
+              {t.sloganTitle.split(' ').slice(1).join(' ')} {/* "للوساطة العقارية" */}
+            </span>
+          </div>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-1 space-x-reverse">
+        <nav className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-2 py-1.5 border border-white/5 shadow-inner">
           {navItems?.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -87,16 +98,16 @@ export default function Header({
                 key={item.id}
                 id={`nav-${item.id}`}
                 onClick={() => setView(item.id as any)}
-                className={`relative flex items-center space-x-2 space-x-reverse rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`relative flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-300 ${
                   isActive 
-                    ? 'bg-[#F27D26]/10 text-[#F27D26] border border-[#F27D26]/20' 
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] text-white shadow-lg shadow-[#F27D26]/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : ''}`} />
                 <span>{item.label}</span>
                 {item.badge !== undefined && (
-                  <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#F27D26] text-[10px] font-bold text-white shadow-md animate-bounce">
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#F27D26] text-[9px] font-black shadow-sm">
                     {item.badge}
                   </span>
                 )}
@@ -108,32 +119,32 @@ export default function Header({
           {user?.role === 'admin' && (
             <button
               onClick={() => setView('admin')}
-              className={`flex items-center space-x-1.5 space-x-reverse rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+              className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-300 ${
                 currentView === 'admin' ? 'bg-[#F27D26]/10 text-[#F27D26]' : 'text-red-400 hover:bg-red-500/5'
               }`}
             >
-              <ShieldAlert className="h-4 w-4" />
+              <ShieldAlert className="h-3.5 w-3.5" />
               <span>{t.admin}</span>
             </button>
           )}
         </nav>
 
         {/* Action Controls & Language Switcher */}
-        <div className="flex items-center space-x-2 space-x-reverse">
+        <div className="flex items-center gap-2">
           {/* Language Switch Button */}
           <button
             onClick={toggleLanguage}
-            className="flex items-center space-x-1 space-x-reverse rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+            className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
             title={lang === 'ar' ? 'Switch Language' : lang === 'en' ? 'گۆڕینی زمان' : 'Change Language'}
           >
             <Globe className="h-3.5 w-3.5 text-[#F27D26]" />
-            <span>{lang === 'ar' ? 'العربية' : lang === 'en' ? 'English' : 'کوردی'}</span>
+            <span className="hidden sm:inline">{lang === 'ar' ? 'العربية' : lang === 'en' ? 'English' : 'کوردی'}</span>
           </button>
 
           {/* Add Property Button */}
           <button
             onClick={onOpenAddProperty}
-            className="hidden sm:flex items-center space-x-1.5 space-x-reverse rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-[#F27D26]/10 hover:shadow-[#F27D26]/20 hover:scale-105 active:scale-95 transition-all"
+            className="hidden sm:flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-[#F27D26]/10 hover:shadow-[#F27D26]/20 hover:scale-105 active:scale-95 transition-all"
           >
             <PlusCircle className="h-4 w-4" />
             <span>{t.addPropButton}</span>
@@ -143,12 +154,12 @@ export default function Header({
           <button
             id="btn-favorites"
             onClick={onOpenFavorites}
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 transition-all hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 transition-all hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20"
             title="المفضلة"
           >
-            <Heart className={`h-5 w-5 ${favorites.length > 0 ? 'fill-[#F27D26] text-[#F27D26]' : ''}`} />
+            <Heart className={`h-4 w-4 ${favorites.length > 0 ? 'fill-[#F27D26] text-[#F27D26]' : ''}`} />
             {favorites.length > 0 && (
-              <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#ff8a3d] text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#ff8a3d] text-[9px] font-bold text-white">
                 {favorites.length}
               </span>
             )}
@@ -156,17 +167,17 @@ export default function Header({
 
           {/* User Status / Login Button */}
           {user ? (
-            <div className="relative group flex items-center space-x-1 space-x-reverse">
+            <div className="relative group flex items-center gap-2">
               <button
                 onClick={onLogout}
-                className="flex items-center space-x-1.5 space-x-reverse rounded-lg border border-red-500/10 bg-red-500/5 hover:bg-red-500/15 px-3 py-2 text-xs font-bold text-red-400 transition-all"
+                className="flex items-center gap-1.5 rounded-lg border border-red-500/10 bg-red-500/5 hover:bg-red-500/15 px-3 py-2 text-xs font-bold text-red-400 transition-all"
                 title={t.logout}
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden lg:inline">{t.logout}</span>
               </button>
               
-              <div className="hidden sm:flex items-center space-x-1.5 space-x-reverse rounded-lg border border-white/5 bg-white/5 px-2.5 py-2 text-xs text-slate-300">
+              <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-2 text-xs text-slate-300">
                 <User className="h-3.5 w-3.5 text-[#F27D26]" />
                 <span className="max-w-[100px] truncate">{user.name?.split(' ')[0] || ''}</span>
                 <span className={`inline-block h-1.5 w-1.5 rounded-full ${user.role === 'admin' ? 'bg-red-500' : 'bg-green-500'}`}></span>
@@ -175,16 +186,16 @@ export default function Header({
           ) : (
             <button
               onClick={onOpenLogin}
-              className="flex items-center space-x-1.5 space-x-reverse rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-white transition-all"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-white transition-all"
             >
               <LogIn className="h-3.5 w-3.5 text-[#F27D26]" />
-              <span>{t.loginButton}</span>
+              <span className="hidden sm:inline">{t.loginButton}</span>
             </button>
           )}
 
           {/* Admin Indicator */}
           {user?.role === 'admin' && currentView === 'admin' && (
-            <div className="hidden lg:flex items-center space-x-1 space-x-reverse rounded-full bg-red-500/10 px-3 py-1 border border-red-500/20 text-[10px] text-red-400">
+            <div className="hidden lg:flex items-center gap-1 space-x-reverse rounded-full bg-red-500/10 px-3 py-1 border border-red-500/20 text-[10px] text-red-400">
               <ShieldAlert className="h-3.5 w-3.5" />
               <span>{t.admin}</span>
             </div>
@@ -194,7 +205,7 @@ export default function Header({
           <button
             id="mobile-menu-toggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 md:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 lg:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -204,7 +215,7 @@ export default function Header({
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div id="mobile-nav-menu" className="border-t border-white/5 bg-[#050505]/95 backdrop-blur-lg md:hidden">
+        <div id="mobile-nav-menu" className="border-t border-white/5 bg-[#050505]/95 backdrop-blur-lg lg:hidden">
           <div className="space-y-2 px-4 py-4">
             {navItems?.map((item) => {
               const Icon = item.icon;
@@ -216,18 +227,18 @@ export default function Header({
                     setView(item.id as any);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-base font-medium transition-all ${
+                  className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all ${
                     isActive 
                       ? 'bg-[#F27D26]/15 text-[#F27D26]' 
                       : 'text-slate-300 hover:bg-white/5'
                   }`}
                 >
-                  <div className="flex items-center space-x-3 space-x-reverse">
-                    <Icon className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
                     <span>{item.label}</span>
                   </div>
                   {item.badge !== undefined && (
-                    <span className="rounded-full bg-[#F27D26] px-2.5 py-0.5 text-xs font-bold text-white">
+                    <span className="rounded-full bg-[#F27D26] px-2.5 py-0.5 text-[10px] font-bold text-white">
                       {item.badge}
                     </span>
                   )}
@@ -241,9 +252,9 @@ export default function Header({
                 onOpenAddProperty();
                 setMobileMenuOpen(false);
               }}
-              className="flex w-full items-center space-x-3 space-x-reverse rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-4 py-3 text-base font-bold text-white shadow-md"
+              className="flex w-full items-center gap-3 rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-4 py-3 text-sm font-bold text-white shadow-md"
             >
-              <PlusCircle className="h-5 w-5" />
+              <PlusCircle className="h-4 w-4" />
               <span>{t.addProperty}</span>
             </button>
             
@@ -254,12 +265,37 @@ export default function Header({
                   setView('admin');
                   setMobileMenuOpen(false);
                 }}
-                className={`flex w-full items-center space-x-3 space-x-reverse rounded-lg px-4 py-3 text-base font-medium ${
+                className={`flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${
                   currentView === 'admin' ? 'bg-[#F27D26]/15 text-[#F27D26]' : 'text-red-400 hover:bg-white/5'
                 }`}
               >
-                <ShieldAlert className="h-5 w-5" />
+                <ShieldAlert className="h-4 w-4" />
                 <span>{t.admin}</span>
+              </button>
+            )}
+
+            {/* Mobile Login / Logout Button */}
+            {!user ? (
+              <button
+                onClick={() => {
+                  onOpenLogin();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 border border-white/5 mt-2"
+              >
+                <LogIn className="h-4 w-4 text-[#F27D26]" />
+                <span>{t.loginButton}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  onLogout();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-400 hover:bg-white/5 border border-white/5 mt-2"
+              >
+                <LogOut className="h-4 w-4 text-red-500" />
+                <span>{t.logout}</span>
               </button>
             )}
           </div>

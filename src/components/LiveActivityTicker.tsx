@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellOff, X, Sparkles, Home, ShieldCheck } from 'lucide-react';
+import { Bell, BellOff, X, Sparkles, ShieldCheck } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { firestore } from '../data/db';
+import { ActivityLog } from '../types';
 
 export default function LiveActivityTicker() {
   const [enabled, setEnabled] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
-
-  const activities = [
-    { text: 'تم بيع منزل في الفلوجة - حي الشهداء بمبلغ 180 مليون دينار عراقي بعد 12 يوماً من النشر.', type: 'sale' },
-    { text: 'تم تأجير شقة في الرمادي بمبلغ 750 ألف دينار شهرياً بعد 5 أيام من النشر.', type: 'rent' },
-    { text: 'تم إضافة عقار جديد مميز في بغداد - المنصور بانتظار تواصل العملاء.', type: 'new' },
-    { text: 'تم بيع أرض سكنية في الكرمة بمبلغ 95 مليون دينار عراقي بعد 8 أيام من النشر.', type: 'sale' },
-    { text: 'تم حجز فيلا فاخرة في الجادرية استعداداً لإتمام معاملة البيع.', type: 'reserve' },
-    { text: 'تم بيع منزل حديث في هيت (حي البكر) خلال 7 أيام من تاريخ الإعلان.', type: 'sale' }
-  ];
+  const [currentActivity, setCurrentActivity] = useState<ActivityLog | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -21,24 +15,38 @@ export default function LiveActivityTicker() {
       return;
     }
 
-    // Initial delay before showing first message
-    const initialTimeout = setTimeout(() => {
-      setVisible(true);
-    }, 4000);
+    const mountTime = Date.now();
+    let isFirstLoad = true;
 
-    // Rotate loop
-    const interval = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % activities.length);
-        setVisible(true);
-      }, 500); // Wait for transition
-    }, 15000); // Change every 15 seconds
+    const q = query(
+      collection(firestore, 'activityLogs'), 
+      orderBy('timestamp', 'desc'), 
+      limit(1)
+    );
 
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (isFirstLoad) {
+        isFirstLoad = false;
+        return;
+      }
+      
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const activity = change.doc.data() as ActivityLog;
+          const activityTime = new Date(activity.timestamp).getTime();
+          
+          if (activityTime > mountTime) {
+            setCurrentActivity(activity);
+            setVisible(true);
+            setTimeout(() => {
+              setVisible(false);
+            }, 10000); // hide after 10 seconds
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
   }, [enabled]);
 
   if (!enabled) {
@@ -59,49 +67,49 @@ export default function LiveActivityTicker() {
       {/* Active notification card */}
       <div 
         id="live-activity-notification"
-        className={`fixed bottom-4 left-4 z-40 max-w-sm rounded-xl border border-gold-prestige/20 bg-slate-950/95 p-4 shadow-xl shadow-black/80 backdrop-blur-md transition-all duration-500 transform ${
-          visible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'
+        className={`fixed bottom-4 left-4 z-40 w-[calc(100%-32px)] sm:w-auto max-w-sm rounded-xl border border-gold-prestige/20 bg-slate-950/95 p-4 shadow-xl shadow-black/80 backdrop-blur-md transition-all duration-500 transform ${
+          visible && currentActivity ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'
         }`}
       >
-        <div className="flex items-start gap-3">
-          
-          {/* Decorative Icon */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold-prestige/10 text-gold-prestige">
-            <Sparkles className="h-4 w-4 animate-pulse" />
-          </div>
-
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider text-gold-prestige uppercase flex items-center gap-1">
-                <ShieldCheck className="h-3 w-3" />
-                <span>نشاط مباشر عقاري</span>
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  id="btn-disable-notifications-bell"
-                  onClick={() => setEnabled(false)}
-                  className="p-1 text-slate-500 hover:text-slate-300"
-                  title="تعطيل الإشعارات نهائياً"
-                >
-                  <BellOff className="h-3 w-3" />
-                </button>
-                <button
-                  id="btn-close-notification"
-                  onClick={() => setVisible(false)}
-                  className="p-1 text-slate-500 hover:text-slate-300"
-                  title="إغلاق مؤقت"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+        {currentActivity && (
+          <div className="flex items-start gap-3">
+            {/* Decorative Icon */}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold-prestige/10 text-gold-prestige">
+              <Sparkles className="h-4 w-4 animate-pulse" />
             </div>
 
-            <p className="text-xs text-slate-200 font-sans leading-relaxed">
-              {activities[currentIndex].text}
-            </p>
-          </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold tracking-wider text-gold-prestige uppercase flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  <span>نشاط مباشر</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    id="btn-disable-notifications-bell"
+                    onClick={() => setEnabled(false)}
+                    className="p-1 text-slate-500 hover:text-slate-300"
+                    title="تعطيل الإشعارات نهائياً"
+                  >
+                    <BellOff className="h-3 w-3" />
+                  </button>
+                  <button
+                    id="btn-close-notification"
+                    onClick={() => setVisible(false)}
+                    className="p-1 text-slate-500 hover:text-slate-300"
+                    title="إغلاق مؤقت"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
 
-        </div>
+              <p className="text-xs text-slate-200 font-sans leading-relaxed">
+                {currentActivity.details || currentActivity.action}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

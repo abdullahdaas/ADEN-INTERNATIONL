@@ -486,19 +486,19 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                     {/* Overlay status tag */}
                     <div className="absolute top-3 right-3 flex gap-1.5">
                       {prop.isApproved ? (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-[10px] font-bold text-emerald-400 backdrop-blur-md">
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-xs font-bold text-emerald-400 backdrop-blur-md">
                           <CheckCircle className="h-3 w-3" />
                           <span>معتمد ونشط للعامة</span>
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-[10px] font-bold text-amber-400 backdrop-blur-md animate-pulse">
+                        <span className="flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-xs font-bold text-amber-400 backdrop-blur-md animate-pulse">
                           <Clock className="h-3 w-3" />
                           <span>قيد المراجعة والتدقيق</span>
                         </span>
                       )}
 
                       {prop.isFeatured && (
-                        <span className="flex items-center gap-1 rounded-full bg-[#F27D26]/20 border border-[#F27D26]/30 px-2.5 py-1 text-[10px] font-bold text-[#F27D26] backdrop-blur-md">
+                        <span className="flex items-center gap-1 rounded-full bg-[#F27D26]/20 border border-[#F27D26]/30 px-2.5 py-1 text-xs font-bold text-[#F27D26] backdrop-blur-md">
                           <BadgeCheck className="h-3 w-3 text-[#F27D26]" />
                           <span>مميز</span>
                         </span>
@@ -509,18 +509,18 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   {/* Title & Stats */}
                   <div className="mt-4 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-slate-500">#{prop.id}</span>
+                      <span className="text-xs font-mono font-bold text-slate-500">#{prop.id}</span>
                       <span className="text-xs font-bold text-emerald-400">{(prop.price ?? 0).toLocaleString()} د.ع</span>
                     </div>
                     <h3 className="text-sm font-black text-white line-clamp-1">{prop.title}</h3>
-                    <p className="text-[11px] text-slate-400 line-clamp-1">{prop.governorate} • {prop.district} • {prop.subDistrict}</p>
+                    <p className="text-xs text-slate-400 line-clamp-1">{prop.governorate} • {prop.district} • {prop.subDistrict}</p>
                   </div>
 
                   {/* Action buttons */}
                   <div className="mt-5 pt-3 border-t border-white/5 flex flex-wrap gap-2">
                     <button 
                       onClick={() => onViewPropertyDetails(prop)}
-                      className="flex-1 rounded-xl bg-white/5 border border-white/5 py-2 text-xs font-bold text-slate-300 hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20 transition-all cursor-pointer text-center min-w-[120px]"
+                      className="flex-1 rounded-xl bg-white/5 border border-white/5 py-2 text-xs font-bold text-slate-300 hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20 transition-all cursor-pointer text-center "
                     >
                       عرض كامل التفاصيل
                     </button>
@@ -530,7 +530,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                         setSelectedProp(prop);
                         setSubmitSuccess(false);
                       }}
-                      className="flex-1 rounded-xl bg-[#F27D26]/10 border border-[#F27D26]/20 py-2 text-xs font-black text-[#F27D26] hover:bg-[#F27D26] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[120px]"
+                      className="flex-1 rounded-xl bg-[#F27D26]/10 border border-[#F27D26]/20 py-2 text-xs font-black text-[#F27D26] hover:bg-[#F27D26] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 "
                     >
                       <CreditCard className="h-3.5 w-3.5" />
                       <span>تمويل الإعلان</span>
@@ -567,7 +567,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                             <span className="h-2 w-2 rounded-full bg-rose-400"></span>
                             تم رفض الدفع
                           </p>
-                          <p className="text-[10px] text-slate-400">{pay.rejectionReason}</p>
+                          <p className="text-xs text-slate-400">{pay.rejectionReason}</p>
                         </div>
                       ) : (
                         <p className="text-emerald-400 flex items-center gap-1.5">
@@ -637,9 +637,9 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                     onChange={(e) => setProfileSlug(e.target.value)}
                     className="w-full rounded-xl border border-white/5 bg-slate-900 px-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40 text-left font-mono"
                   />
-                  <span className="absolute left-3 top-2.5 text-[10px] text-slate-500">@</span>
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500">@</span>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1 font-sans">
+                <p className="text-xs text-slate-500 mt-1 font-sans">
                   سيصبح رابطك: <span className="text-[#F27D26] font-mono">?profile={profileSlug || 'slug'}</span>
                 </p>
               </div>
@@ -689,7 +689,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleAvatarChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
-                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-[10px] py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع صورة</button>
+                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع صورة</button>
                   </div>
                 </div>
               </div>
@@ -703,7 +703,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleCoverChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
-                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-[10px] py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع غلاف</button>
+                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع غلاف</button>
                   </div>
                 </div>
               </div>
@@ -749,7 +749,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   <p className="text-[9px] text-[#F27D26] font-mono">?profile={profileSlug || 'username'}</p>
                 </div>
 
-                <p className="text-[10px] text-slate-400 font-sans mt-2 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-slate-400 font-sans mt-2 line-clamp-2 leading-relaxed">
                   {profileBio || 'نبذة تصف نشاطك العقاري في السوق العراقي...'}
                 </p>
 
@@ -885,7 +885,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">المحافظة</label>
+                    <label className="block text-xs text-slate-400 mb-1">المحافظة</label>
                     <select
                       required
                       value={editGov}
@@ -905,7 +905,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">القضاء</label>
+                    <label className="block text-xs text-slate-400 mb-1">القضاء</label>
                     <select
                       required
                       value={editDist}
@@ -925,7 +925,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">الناحية / الحي</label>
+                    <label className="block text-xs text-slate-400 mb-1">الناحية / الحي</label>
                     <select
                       required
                       value={editSubDist}
@@ -944,7 +944,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">المحلة / الحي التفصيلي</label>
+                    <label className="block text-xs text-slate-400 mb-1">المحلة / الحي التفصيلي</label>
                     <select
                       required
                       value={editNeigh}
@@ -961,7 +961,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-slate-400 mb-1">العنوان التفصيلي وأقرب نقطة دالة</label>
+                  <label className="block text-xs text-slate-400 mb-1">العنوان التفصيلي وأقرب نقطة دالة</label>
                   <input
                     type="text"
                     required
@@ -981,29 +981,29 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-right mb-4">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">غرف النوم</label>
+                    <label className="block text-xs text-slate-400 mb-1">غرف النوم</label>
                     <input type="number" value={editBedrooms} onChange={(e) => setEditBedrooms(parseInt(e.target.value) || 0)} className="w-full rounded-lg bg-slate-900 border border-white/5 px-2 py-1 text-xs text-white text-center" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">الحمامات</label>
+                    <label className="block text-xs text-slate-400 mb-1">الحمامات</label>
                     <input type="number" value={editBathrooms} onChange={(e) => setEditBathrooms(parseInt(e.target.value) || 0)} className="w-full rounded-lg bg-slate-900 border border-white/5 px-2 py-1 text-xs text-white text-center" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">الصالات المفتوحة</label>
+                    <label className="block text-xs text-slate-400 mb-1">الصالات المفتوحة</label>
                     <input type="number" value={editLivingRooms} onChange={(e) => setEditLivingRooms(parseInt(e.target.value) || 0)} className="w-full rounded-lg bg-slate-900 border border-white/5 px-2 py-1 text-xs text-white text-center" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">عدد الطوابق</label>
+                    <label className="block text-xs text-slate-400 mb-1">عدد الطوابق</label>
                     <input type="number" value={editFloors} onChange={(e) => setEditFloors(parseInt(e.target.value) || 0)} className="w-full rounded-lg bg-slate-900 border border-white/5 px-2 py-1 text-xs text-white text-center" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">سنة التشييد</label>
+                    <label className="block text-xs text-slate-400 mb-1">سنة التشييد</label>
                     <input type="number" value={editConstructionYear} onChange={(e) => setEditConstructionYear(parseInt(e.target.value) || 0)} className="w-full rounded-lg bg-slate-900 border border-white/5 px-2 py-1 text-xs text-white text-center" />
                   </div>
                 </div>
 
                 {/* Checkboxes */}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-2 border-t border-white/5 text-[11px]">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-2 border-t border-white/5 text-xs">
                   {[
                     { label: 'مؤثث بالكامل', val: editIsFurnished, set: setEditIsFurnished },
                     { label: 'كراج سيارات واسع', val: editHasGarage, set: setEditHasGarage },
@@ -1026,7 +1026,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 <h4 className="text-xs font-bold text-[#F27D26]">الوسائط الإعلامية المرئية:</h4>
                 
                 <div>
-                  <label className="block text-[10px] text-slate-400 mb-1">رابط جولة الفيديو (YouTube/Drive)</label>
+                  <label className="block text-xs text-slate-400 mb-1">رابط جولة الفيديو (YouTube/Drive)</label>
                   <input
                     type="text"
                     value={editVideoUrl}
@@ -1037,7 +1037,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-slate-400 mb-1.5">صور العقار المنشورة ({editImages.length})</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">صور العقار المنشورة ({editImages.length})</label>
                   <div className="grid grid-cols-4 gap-2 mb-3">
                     {editImages?.map((img, i) => (
                       <div key={i} className="relative h-16 rounded-lg bg-slate-900 border border-white/5 overflow-hidden group">
@@ -1138,7 +1138,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                             <h4 className={`text-xs font-black ${isSelected ? 'text-[#F27D26]' : 'text-white'}`}>{info.nameAr}</h4>
                             <span className="text-xs font-mono font-bold text-emerald-400">{info.priceAr}</span>
                           </div>
-                          <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">{info.descAr}</p>
+                          <p className="text-xs text-slate-400 mt-2 leading-relaxed">{info.descAr}</p>
                         </div>
                       );
                     })}
@@ -1180,7 +1180,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                       <ShieldAlert className="h-4 w-4 text-[#F27D26]" />
                       <span>تعليمات إرسال الأموال:</span>
                     </p>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-400 leading-relaxed">
                       الرجاء إرسال مبلغ الباقة المختار <span className="text-emerald-400 font-bold">({packagesInfo[selectedPackage].priceAr})</span> إلى المحفظة الرسمية للمنصة التالية:
                     </p>
                     <div className="mt-3 flex items-center justify-between bg-white/5 rounded-xl px-4 py-2 text-xs">
@@ -1241,9 +1241,9 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
                       {proofImage ? (
-                        <span className="text-[11px] text-emerald-400 font-bold">✓ تم رفع صورة الإيصال بنجاح</span>
+                        <span className="text-xs text-emerald-400 font-bold">✓ تم رفع صورة الإيصال بنجاح</span>
                       ) : (
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500 flex items-center gap-1.5">
                           <Upload className="h-3.5 w-3.5" />
                           <span>اضغط لرفع لقطة شاشة الإيصال</span>
                         </span>
