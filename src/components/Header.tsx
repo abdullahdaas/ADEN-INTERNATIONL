@@ -138,7 +138,7 @@ export default function Header({
             title={lang === 'ar' ? 'Switch Language' : lang === 'en' ? 'گۆڕینی زمان' : 'Change Language'}
           >
             <Globe className="h-3.5 w-3.5 text-[#F27D26]" />
-            <span className="hidden sm:inline">{lang === 'ar' ? 'العربية' : lang === 'en' ? 'English' : 'کوردی'}</span>
+            <span className="inline">{lang === 'ar' ? 'اللغة' : lang === 'en' ? 'Language' : 'زمان'}</span>
           </button>
 
           {/* Add Property Button */}
@@ -189,7 +189,7 @@ export default function Header({
               className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-white transition-all"
             >
               <LogIn className="h-3.5 w-3.5 text-[#F27D26]" />
-              <span className="hidden sm:inline">{t.loginButton}</span>
+              <span className="inline">{t.loginButton}</span>
             </button>
           )}
 

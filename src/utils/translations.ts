@@ -97,7 +97,7 @@ export const translations = {
     generalInquiry: 'استفسار عام عن الخدمات',
     officeRegRequest: 'طلب تسجيل مكتب عقاري',
     complaintReport: 'تقديم شكوى أو بلاغ فوري',
-    generalUserRole: 'عامة الناس / مواطن عراقي',
+    generalUserRole: 'تسجيل دخول المواطنين',
     platformManagerRole: 'إدارة المنصة المعتمدة',
     citizenDashboard: 'لوحة تحكم المواطن والعقارات المقدمة',
     submittedByYou: 'العقارات التي قمت بتقديمها للمراجعة',
