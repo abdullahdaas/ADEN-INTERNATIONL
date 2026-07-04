@@ -986,14 +986,16 @@ app.get('/api/stats', async (req, res) => {
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production' && !fs.existsSync(path.join(process.cwd(), 'dist', 'index.html')) && !process.env.NETLIFY) {
-    const { createServer: createViteServer } = await import('vite');
+  const isLambda = !!process.env.LAMBDA_TASK_ROOT || !!process.env.AWS_EXECUTION_ENV || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  
+  if (!isLambda && process.env.NODE_ENV !== 'production' && !fs.existsSync(path.join(process.cwd(), 'dist', 'index.html')) && !process.env.NETLIFY) {
+    const { createServer: createViteServer } = await Function('return import("vite")')();
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else if (!process.env.NETLIFY) {
+  } else if (!isLambda && !process.env.NETLIFY) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res, next) => {
@@ -1006,7 +1008,7 @@ async function startServer() {
     res.status(500).json({ error: 'Internal Server Error' });
   });
 
-  if (!process.env.NETLIFY && process.env.NODE_ENV !== 'test' && !process.env.LAMBDA_TASK_ROOT) {
+  if (!isLambda && !process.env.NETLIFY && process.env.NODE_ENV !== 'test') {
     app.listen(PORT, '0.0.0.0', () => console.log(`Server running at http://0.0.0.0:${PORT}`));
   }
 }
