@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 import { Property } from '../types';
+import { IRAQ_BOUNDS } from '../data/iraqLocations';
 import { updateProperty } from '../utils/api';
 import { formatPrice } from './PropertyCard';
 import { Save, AlertCircle, MapPin } from 'lucide-react';
-import { MapLocationPicker } from './MapLocationPicker';
+import { SmartLocationPicker } from './SmartLocationPicker';
 
 // Fix leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -43,17 +44,24 @@ interface AdminMapEditorProps {
   onRefresh: () => void;
 }
 
+const { BaseLayer } = LayersControl;
+
 export function AdminMapEditor({ properties, onRefresh }: AdminMapEditorProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [newLocation, setNewLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [newLocation, setNewLocation] = useState<any>(null);
+  const [isLocationValid, setIsLocationValid] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveLocation = async () => {
     if (!selectedProperty || !newLocation) return;
     setIsSaving(true);
     try {
-      await updateProperty(selectedProperty.id, { coordinates: newLocation });
+      if (!isLocationValid) {
+      alert('يرجى تحديد موقع صحيح داخل العراق.');
+      return;
+    }
+    await updateProperty(selectedProperty.id, { ...newLocation });
       alert('تم تحديث موقع العقار بنجاح!');
       setIsEditing(false);
       setSelectedProperty(null);
@@ -104,11 +112,11 @@ export function AdminMapEditor({ properties, onRefresh }: AdminMapEditorProps) {
                     <span>قم بتحريك الخريطة أو البحث لتحديد الموقع الصحيح الجديد.</span>
                   </div>
                   
-                  <div className="h-48 rounded-lg overflow-hidden border border-white/20">
-                    <MapLocationPicker 
-                      initialLocation={newLocation || selectedProperty.coordinates}
-                      onLocationSelect={(loc) => setNewLocation(loc)}
-                    />
+                  <div className="rounded-lg overflow-hidden border border-white/20">
+                    <SmartLocationPicker 
+                         initialLocation={selectedProperty}
+                        onChange={(loc, isValid) => { setNewLocation(loc); setIsLocationValid(isValid); }}
+                      />
                   </div>
 
                   <div className="flex gap-2">

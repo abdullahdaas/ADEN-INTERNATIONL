@@ -37,18 +37,27 @@ export interface Property {
   space: number; // in square meters (m²)
   status: PropertyStatus;
   isFeatured: boolean;
+  isSuspended?: boolean;
   featuredPackage?: string; // 'basic' | 'medium' | 'premium' | 'unlimited'
   
   // Location
+  country?: string; // 'Iraq'
   governorate: string;
   district: string;
   subDistrict: string;
+  city?: string;
   neighborhood: string;
+  village?: string;
+  street?: string;
+  nearestLandmark?: string;
+  postalCode?: string;
   address: string;
   coordinates: {
     lat: number;
     lng: number;
   };
+  googleMapsUrl?: string;
+  locationTimestamp?: string;
 
   // Specs
   bedrooms: number;
@@ -411,6 +420,13 @@ export interface ElectronicAgreement {
   counterpartyPhone: string; // To notify/link the other party
   status: 'pending_approval' | 'pending_payment' | 'active' | 'cancelled' | 'expired';
   cancellationReason?: string;
+  paymentMethod?: string;
+  payerName?: string;
+  payerPhone?: string;
+  paymentAmount?: string;
+  paymentProofUrl?: string;
+  qrCodeUrl?: string;
+  referenceNumber?: string;
   createdAt: string;
   approvedAt?: string;
   expiresAt?: string;

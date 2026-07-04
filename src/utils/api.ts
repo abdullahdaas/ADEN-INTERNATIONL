@@ -89,7 +89,8 @@ export async function updateProperty(id: string, property: Partial<Property>): P
 
 export async function deleteProperty(id: string): Promise<boolean> {
   const res = await fetch(`${API_BASE}/properties/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to delete property');
   const data = await res.json();
@@ -399,4 +400,99 @@ export async function incrementPhoneViews(id: string): Promise<void> {
     method: 'POST',
     headers: getAuthHeaders()
   });
+}
+
+
+export const fetchAgreements = async (): Promise<any[]> => {
+  const res = await fetch('/api/agreements');
+  if (!res.ok) throw new Error('Failed to fetch agreements');
+  return res.json();
+};
+
+export const updateAgreementStatus = async (id: string, status: string): Promise<any> => {
+  const res = await fetch('/api/agreements/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!res.ok) throw new Error('Failed to update agreement');
+  return res.json();
+};
+
+export const fetchServiceProviders = async (): Promise<any[]> => {
+  const res = await fetch('/api/service-providers');
+  return res.json();
+};
+export const addServiceProvider = async (provider: any): Promise<any> => {
+  const res = await fetch('/api/service-providers', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(provider)
+  });
+  return res.json();
+};
+export const updateServiceProvider = async (id: string, provider: any): Promise<any> => {
+  const res = await fetch('/api/service-providers/' + id, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(provider)
+  });
+  return res.json();
+};
+export const deleteServiceProvider = async (id: string): Promise<any> => {
+  const res = await fetch('/api/service-providers/' + id, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return res.json();
+};
+
+export const fetchProviderApplications = async (): Promise<any[]> => {
+  const res = await fetch('/api/provider-applications');
+  return res.json();
+};
+export const submitProviderApplication = async (app: any): Promise<any> => {
+  const res = await fetch('/api/provider-applications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(app)
+  });
+  return res.json();
+};
+export const updateProviderApplication = async (id: string, updates: any): Promise<any> => {
+  const res = await fetch('/api/provider-applications/' + id, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  });
+  return res.json();
+};
+
+// GIS Data Management
+export async function getGisCollection(collection: string) {
+  const res = await fetch(`${API_BASE}/gis/${collection}`);
+  return res.json();
+}
+export async function addGisItem(collection: string, data: any) {
+  const res = await fetch(`${API_BASE}/gis/${collection}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+export async function updateGisItem(collection: string, id: string, data: any) {
+  const res = await fetch(`${API_BASE}/gis/${collection}/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+export async function deleteGisItem(collection: string, id: string) {
+  const res = await fetch(`${API_BASE}/gis/${collection}/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return res.json();
 }

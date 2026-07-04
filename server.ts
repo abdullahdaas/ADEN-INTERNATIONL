@@ -179,6 +179,94 @@ app.get('/api/settings', async (req, res) => {
   res.json(await db.settings.get());
 });
 
+
+// Service Providers
+app.get('/api/service-providers', async (req, res) => {
+  res.json(await db.serviceProviders.getAll());
+});
+app.post('/api/service-providers', async (req, res) => {
+  await db.serviceProviders.add(req.body);
+  res.json({ success: true, provider: req.body });
+});
+app.put('/api/service-providers/:id', async (req, res) => {
+  await db.serviceProviders.update(req.params.id, req.body);
+  res.json({ success: true });
+});
+app.delete('/api/service-providers/:id', async (req, res) => {
+  await db.serviceProviders.remove(req.params.id);
+  res.json({ success: true });
+});
+
+// Provider Applications
+app.get('/api/provider-applications', async (req, res) => {
+  res.json(await db.providerApplications.getAll());
+});
+app.post('/api/provider-applications', async (req, res) => {
+  await db.providerApplications.add(req.body);
+  res.json({ success: true, application: req.body });
+});
+app.put('/api/provider-applications/:id', async (req, res) => {
+  await db.providerApplications.update(req.params.id, req.body);
+  res.json({ success: true });
+});
+
+// GIS Routes
+app.get('/api/gis/:collection', async (req, res) => {
+  try {
+    const colName = req.params.collection;
+    const col = db[colName];
+    if (col && typeof col.getAll === 'function') {
+      res.json(await col.getAll());
+    } else {
+      res.status(404).json({ error: 'Collection not found' });
+    }
+  } catch(e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.post('/api/gis/:collection', async (req, res) => {
+  try {
+    const colName = req.params.collection;
+    const col = db[colName];
+    if (col && typeof col.add === 'function') {
+      await col.add(req.body);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Collection not found' });
+    }
+  } catch(e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.put('/api/gis/:collection/:id', async (req, res) => {
+  try {
+    const colName = req.params.collection;
+    const col = db[colName];
+    if (col && typeof col.update === 'function') {
+      await col.update(req.params.id, req.body);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Collection not found' });
+    }
+  } catch(e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.delete('/api/gis/:collection/:id', async (req, res) => {
+  try {
+    const colName = req.params.collection;
+    const col = db[colName];
+    if (col && typeof col.remove === 'function') {
+      await col.remove(req.params.id);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Collection not found' });
+    }
+  } catch(e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/agreements', async (req, res) => {
   if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
   res.json(await db.agreements.getAll());
@@ -198,6 +286,21 @@ app.post('/api/agreements', async (req, res) => {
     res.json({ success: true, agreement });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+app.put('/api/agreements/:id', async (req, res) => {
+  try {
+    const agreement = await db.agreements.getById(req.params.id);
+    if (!agreement) {
+      res.status(404).json({ success: false, error: 'Not found' });
+      return;
+    }
+    const updates = req.body;
+    await db.agreements.update(req.params.id, updates);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -986,16 +1089,14 @@ app.get('/api/stats', async (req, res) => {
 });
 
 async function startServer() {
-  const isLambda = !!process.env.LAMBDA_TASK_ROOT || !!process.env.AWS_EXECUTION_ENV || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-  
-  if (!isLambda && process.env.NODE_ENV !== 'production' && !fs.existsSync(path.join(process.cwd(), 'dist', 'index.html')) && !process.env.NETLIFY) {
+  if (process.env.VITE_DEV === 'true') {
     const { createServer: createViteServer } = await Function('return import("vite")')();
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else if (!isLambda && !process.env.NETLIFY) {
+  } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res, next) => {
@@ -1008,7 +1109,7 @@ async function startServer() {
     res.status(500).json({ error: 'Internal Server Error' });
   });
 
-  if (!isLambda && !process.env.NETLIFY && process.env.NODE_ENV !== 'test') {
+  if (process.env.VITE_DEV === 'true' || (process.env.NODE_ENV === 'production' && !process.env.LAMBDA_TASK_ROOT && !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.NETLIFY)) {
     app.listen(PORT, '0.0.0.0', () => console.log(`Server running at http://0.0.0.0:${PORT}`));
   }
 }

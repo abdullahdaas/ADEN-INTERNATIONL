@@ -3,6 +3,8 @@ import {
   Download,
   ShieldAlert,
   LayoutDashboard,
+  Save,
+  Briefcase,
   Building2,
   MessageSquare,
   CreditCard,
@@ -45,6 +47,9 @@ import {
   markMessageRead,
   fetchPayments,
   updatePaymentStatus,
+  fetchAgreements,
+  updateAgreementStatus,
+  fetchServiceProviders, addServiceProvider, updateServiceProvider, deleteServiceProvider, fetchProviderApplications, updateProviderApplication,
   fetchStats,
   fetchSupervisors,
   createSupervisor,
@@ -62,6 +67,7 @@ import {
 import { formatPrice } from "./PropertyCard";
 import { IRAQ_LOCATIONS } from "../data/mockData";
 import { AdminMapEditor } from "./AdminMapEditor";
+import { AdminGISPanel } from "./AdminGISPanel";
 import { MapPin } from "lucide-react";
 import ElectronicAgreementView from "./ElectronicAgreementView";
 
@@ -105,6 +111,15 @@ export default function AdminPortal({
     | "agreement-payments"
   >("dashboard");
   const [selectedPaymentProof, setSelectedPaymentProof] = useState<any>(null);
+  const [selectedAgreementRequest, setSelectedAgreementRequest] = useState<any>(null);
+  const [serviceProviders, setServiceProviders] = useState<any[]>([]);
+  const [providerApplications, setProviderApplications] = useState<any[]>([]);
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState<any>(null);
+  const [editingProvider, setEditingProvider] = useState<any>(null);
+  const [providerForm, setProviderForm] = useState({ name: '', category: '', governorate: '', city: '', address: '', description: '', logo: '', coverImage: '', yearsOfExperience: 0, status: 'معتمد' });
+  const [isEditingProperty, setIsEditingProperty] = useState(false);
+  const [editPropForm, setEditPropForm] = useState<any>(null);
   const [agreementRequests, setAgreementRequests] = useState([
     {
       id: "req_1",
@@ -202,6 +217,15 @@ export default function AdminPortal({
       const allProps = await fetchProperties({ isApproved: "all" }); // Fetch ALL including pending and active
       const allMsgs = await fetchMessages();
       const allPays = await fetchPayments();
+      const allAgreements = await fetchAgreements();
+      setAgreementRequests(allAgreements);
+      
+      const [provs, apps] = await Promise.all([
+        fetchServiceProviders(),
+        fetchProviderApplications()
+      ]);
+      setServiceProviders(provs);
+      setProviderApplications(apps);
       const allDeals = await fetchDeals();
       const currentStats = await fetchStats();
 
@@ -384,6 +408,39 @@ export default function AdminPortal({
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleToggleFeatured = async (p: Property) => {
+    try {
+      await updateProperty(p.id, { isFeatured: !p.isFeatured });
+      loadAdminData();
+      onRefreshProperties();
+      if (selectedInspectProperty?.id === p.id) {
+        setSelectedInspectProperty({ ...p, isFeatured: !p.isFeatured });
+      }
+    } catch (e) { console.error(e); }
+  };
+  
+  const handleToggleSuspend = async (p: Property) => {
+    try {
+      const newStatus = p.isSuspended ? false : true;
+      await updateProperty(p.id, { isSuspended: newStatus, isApproved: !newStatus });
+      loadAdminData();
+      onRefreshProperties();
+      if (selectedInspectProperty?.id === p.id) {
+        setSelectedInspectProperty({ ...p, isSuspended: newStatus, isApproved: !newStatus });
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSaveEditProperty = async () => {
+    try {
+      await updateProperty(editPropForm.id, editPropForm);
+      loadAdminData();
+      onRefreshProperties();
+      setSelectedInspectProperty(editPropForm);
+      setIsEditingProperty(false);
+    } catch (e) { console.error(e); }
   };
 
   const handleDeleteProperty = async (id: string) => {
@@ -602,7 +659,7 @@ export default function AdminPortal({
               <button
                 onClick={() => setAdminView("map")}
                 className={`w-full flex items-center justify-between rounded-lg px-4 py-3 font-semibold transition-all ${
-                  adminView === "map"
+                  adminView === "gis"
                     ? "bg-white/5 text-gold-prestige"
                     : "text-slate-300 hover:bg-white/5"
                 }`}
@@ -664,9 +721,9 @@ export default function AdminPortal({
             {(!adminUser?.isSupervisor ||
               adminUser?.permissions?.manageLocations) && (
               <button
-                onClick={() => setAdminView("locations")}
+                onClick={() => setAdminView("gis")}
                 className={`w-full flex items-center justify-between rounded-lg px-4 py-3 font-semibold transition-all ${
-                  adminView === "locations"
+                  adminView === "gis"
                     ? "bg-white/5 text-gold-prestige"
                     : "text-slate-300 hover:bg-white/5"
                 }`}
@@ -771,7 +828,7 @@ export default function AdminPortal({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    <span>الخدمات العقارية</span>
+                    <span>مزودي الخدمات</span>
                   </div>
                 </button>
                 <button
@@ -1060,9 +1117,9 @@ export default function AdminPortal({
         )}
 
         {/* VIEW 2.5: MAP EDITOR */}
-        {adminView === "map" && (
+        {adminView === "gis" && (
           <div className="animate-fade-in">
-            <AdminMapEditor properties={properties} onRefresh={loadAdminData} />
+            <AdminGISPanel properties={properties} onRefresh={loadAdminData} />
           </div>
         )}
 
@@ -1581,130 +1638,6 @@ export default function AdminPortal({
           </div>
         )}
 
-        {adminView === "locations" && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6">
-              <h2 className="text-base font-bold text-white mb-1">
-                إدارة التقسيم والمخطط الإداري الجغرافي
-              </h2>
-              <p className="text-xs text-slate-400 font-sans">
-                أضف محافظات أو أقضية أو نواحي أو أحياء جديدة لدعم دقة وسلاسة
-                البحث للمستخدمين
-              </p>
-            </div>
-
-            {/* Insertion Form */}
-            <form
-              onSubmit={handleAddLocation}
-              className="p-5 rounded-2xl border border-white/5 bg-slate-950/40 space-y-4"
-            >
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Plus className="h-4.5 w-4.5 text-gold-prestige" />
-                <span>إضافة تقسيم إداري جغرافي جديد</span>
-              </h4>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 text-xs font-sans">
-                <div>
-                  <label className="block text-slate-400 mb-1">المحافظة</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="مثال: الأنبار"
-                    value={newGov}
-                    onChange={(e) => setNewGov(e.target.value)}
-                    className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">القضاء</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="مثال: الفلوجة"
-                    value={newDist}
-                    onChange={(e) => setNewDist(e.target.value)}
-                    className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">الناحية</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="مثال: الكرمة"
-                    value={newSubDist}
-                    onChange={(e) => setNewSubDist(e.target.value)}
-                    className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">
-                    الحي السكني
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="مثال: حي الشهداء"
-                    value={newNeigh}
-                    onChange={(e) => setNewNeigh(e.target.value)}
-                    className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  id="btn-add-location-submit"
-                  type="submit"
-                  className="rounded-lg bg-gold-prestige hover:bg-gold-accent px-5 py-2 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>إضافة وتوسيع النطاق</span>
-                </button>
-              </div>
-
-              {locationSuccess && (
-                <div className="rounded-lg bg-emerald-500/10 p-3 border border-emerald-500/20 text-xs text-emerald-400 text-center">
-                  {locationSuccess}
-                </div>
-              )}
-            </form>
-
-            {/* Location hierarchy inspection */}
-            <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6 space-y-4">
-              <h3 className="text-sm font-bold text-white border-b border-white/5 pb-2">
-                المخطط الإداري الجغرافي النشط حالياً
-              </h3>
-
-              <div className="space-y-4 max-h-[350px] overflow-y-auto text-xs font-sans">
-                {locations?.map((loc) => (
-                  <div
-                    key={loc.governorate}
-                    className="p-4 rounded-xl bg-slate-950/30 border border-white/5 space-y-2"
-                  >
-                    <h4 className="font-bold text-white text-sm">
-                      محافظة: {loc.governorate}
-                    </h4>
-                    <div className="mr-4 space-y-1 text-slate-400 text-xs">
-                      {loc.districts?.map((d) => (
-                        <p key={d.name}>
-                          قضاء:{" "}
-                          <span className="text-slate-200 font-bold">
-                            {d.name}
-                          </span>{" "}
-                          ← نواحي:{" "}
-                          {d.subDistricts?.map((s) => s.name).join(", ")}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 6: SUPERVISOR ACCOUNTS MANAGEMENT */}
         {adminView === "supervisors" && (
           <div className="space-y-6 animate-fade-in text-right" dir="rtl">
             <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6">
@@ -2608,161 +2541,345 @@ export default function AdminPortal({
           </div>
         )}
 
+        
         {/* SERVICES VIEW */}
         {adminView === "services" && (
           <div className="space-y-6 animate-fade-in">
+            {/* Providers Management */}
             <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6 flex justify-between items-center">
               <div>
                 <h2 className="text-base font-bold text-white mb-1">
-                  إدارة الخدمات العقارية
+                  إدارة مزودي الخدمات
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  مراجعة حسابات مقدمي الخدمات والموافقة عليها
+                  إدارة المزودين المعتمدين وإضافة مزودين جدد
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
-                <Plus className="h-4 w-4" /> مقدم خدمة جديد
+              <button onClick={() => { setEditingProvider(null); setProviderForm({ name: '', category: '', governorate: '', city: '', address: '', description: '', logo: '', coverImage: '', yearsOfExperience: 0, status: 'معتمد' }); setShowProviderModal(true); }} className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
+                <Plus className="h-4 w-4" /> إضافة مزود
               </button>
             </div>
-
-            <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full  text-right text-xs">
+            
+            <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5 mb-8">
+              <table className="w-full text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
                     <th className="py-3 px-4 font-normal">اسم مقدم الخدمة</th>
                     <th className="py-3 px-4 font-normal">الفئة</th>
                     <th className="py-3 px-4 font-normal">المحافظة</th>
-                    <th className="py-3 px-4 font-normal">الاشتراك</th>
+                    <th className="py-3 px-4 font-normal">سنوات الخبرة</th>
                     <th className="py-3 px-4 font-normal">الحالة</th>
                     <th className="py-3 px-4 font-normal">إجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  <tr className="text-slate-300 hover:bg-white/[0.02]">
-                    <td className="py-3 px-4 font-bold text-white">
-                      مكتب الرواد للمساحة
-                    </td>
-                    <td className="py-3 px-4">مكاتب المساحة والمساحين</td>
-                    <td className="py-3 px-4">بغداد</td>
-                    <td className="py-3 px-4">أعمال (Business)</td>
-                    <td className="py-3 px-4">
-                      <span className="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
-                        معتمد
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 flex gap-2">
-                      <button className="text-blue-400 hover:text-blue-300">
-                        مراجعة
-                      </button>
-                      <button className="text-red-400 hover:text-red-300">
-                        إيقاف
-                      </button>
-                    </td>
-                  </tr>
-                  <tr className="text-slate-300 hover:bg-white/[0.02]">
-                    <td className="py-3 px-4 font-bold text-white">
-                      شركة البيت الحديث للمقاولات
-                    </td>
-                    <td className="py-3 px-4">شركات البناء والمقاولات</td>
-                    <td className="py-3 px-4">أربيل</td>
-                    <td className="py-3 px-4">احترافي (Pro)</td>
-                    <td className="py-3 px-4">
-                      <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
-                        بانتظار المراجعة
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 flex gap-2">
-                      <button className="text-emerald-400 hover:text-emerald-300">
-                        قبول
-                      </button>
-                      <button className="text-red-400 hover:text-red-300">
-                        رفض
-                      </button>
-                    </td>
-                  </tr>
+                  {serviceProviders.map(prov => (
+                    <tr key={prov.id} className="text-slate-300 hover:bg-white/[0.02]">
+                      <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
+                        {prov.logo && <img src={prov.logo} className="w-6 h-6 rounded-full" alt="logo" />}
+                        {prov.name}
+                      </td>
+                      <td className="py-3 px-4">{prov.category}</td>
+                      <td className="py-3 px-4">{prov.governorate}</td>
+                      <td className="py-3 px-4 font-mono">{prov.yearsOfExperience}</td>
+                      <td className="py-3 px-4">
+                        <span className={`${prov.status === 'معتمد' || prov.status === 'نشط' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'} px-2 py-1 rounded`}>
+                          {prov.status || 'معتمد'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 flex gap-2">
+                        <button onClick={() => { setEditingProvider(prov); setProviderForm(prov); setShowProviderModal(true); }} className="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                          تعديل
+                        </button>
+                        <button onClick={async () => {
+                          const newStatus = (prov.status === 'موقوف' || prov.status === 'suspended') ? 'نشط' : 'موقوف';
+                          await updateServiceProvider(prov.id, { status: newStatus });
+                          loadAdminData();
+                        }} className="text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                          {(prov.status === 'موقوف' || prov.status === 'suspended') ? 'تفعيل' : 'إيقاف'}
+                        </button>
+                        <button onClick={async () => {
+                          if (window.confirm('حذف المزود نهائياً؟')) {
+                            await deleteServiceProvider(prov.id);
+                            loadAdminData();
+                          }
+                        }} className="text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                          حذف
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {serviceProviders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-6 text-slate-500">لا يوجد مزودي خدمات</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Provider Applications */}
+            <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6 flex justify-between items-center mt-8">
+              <div>
+                <h2 className="text-base font-bold text-white mb-1">
+                  طلبات الانضمام الجديدة
+                </h2>
+                <p className="text-xs text-slate-400 font-sans">
+                  مراجعة واعتماد طلبات الانضمام كمزود خدمة
+                </p>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-950/80">
+                  <tr className="border-b border-white/5 text-slate-400">
+                    <th className="py-3 px-4 font-normal">اسم مقدم الطلب</th>
+                    <th className="py-3 px-4 font-normal">رقم الهاتف</th>
+                    <th className="py-3 px-4 font-normal">فئة الخدمة</th>
+                    <th className="py-3 px-4 font-normal">الحالة</th>
+                    <th className="py-3 px-4 font-normal">إجراء</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {providerApplications.map(app => (
+                    <tr key={app.id} className="text-slate-300 hover:bg-white/[0.02]">
+                      <td className="py-3 px-4 font-bold text-white">{app.name}</td>
+                      <td className="py-3 px-4 font-mono">{app.phone}</td>
+                      <td className="py-3 px-4">{app.category}</td>
+                      <td className="py-3 px-4">
+                        <span className={`${app.status === 'pending' ? 'text-amber-400 bg-amber-500/10' : app.status === 'approved' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'} px-2 py-1 rounded`}>
+                          {app.status === 'pending' ? 'معلق' : app.status === 'approved' ? 'مقبول' : 'مرفوض'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 flex gap-2">
+                        <button onClick={() => setShowApplicationModal(app)} className="text-blue-400 hover:text-blue-300">
+                          معاينة
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {providerApplications.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-slate-500">لا توجد طلبات انضمام</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Add / Edit Provider Modal */}
+            {showProviderModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                  <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Briefcase className="h-5 w-5 text-[#F27D26]" />
+                      {editingProvider ? 'تعديل مزود خدمة' : 'إضافة مزود خدمة جديد'}
+                    </h3>
+                    <button onClick={() => setShowProviderModal(false)} className="p-1 hover:bg-white/10 rounded-lg">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto space-y-4 text-right" dir="rtl">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">اسم المزود / الشركة</label>
+                        <input type="text" value={providerForm.name} onChange={e => setProviderForm({...providerForm, name: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-[#F27D26] outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">الفئة</label>
+                        <input type="text" value={providerForm.category} onChange={e => setProviderForm({...providerForm, category: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-[#F27D26] outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">المحافظة</label>
+                        <input type="text" value={providerForm.governorate} onChange={e => setProviderForm({...providerForm, governorate: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-[#F27D26] outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">سنوات الخبرة</label>
+                        <input type="number" value={providerForm.yearsOfExperience} onChange={e => setProviderForm({...providerForm, yearsOfExperience: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-[#F27D26] outline-none font-mono" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs text-slate-400 mb-1">الوصف</label>
+                        <textarea rows={3} value={providerForm.description} onChange={e => setProviderForm({...providerForm, description: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-[#F27D26] outline-none" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs text-slate-400 mb-1">رابط الشعار (Logo URL)</label>
+                        <input type="url" value={providerForm.logo} onChange={e => setProviderForm({...providerForm, logo: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm text-white font-mono focus:border-[#F27D26] outline-none" dir="ltr" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3">
+                    <button 
+                      onClick={async () => {
+                        if (editingProvider) {
+                          await updateServiceProvider(editingProvider.id, providerForm);
+                        } else {
+                          await addServiceProvider(providerForm);
+                        }
+                        setShowProviderModal(false);
+                        loadAdminData();
+                      }}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+                    >
+                      <Save className="w-4 h-4" /> حفظ المزود
+                    </button>
+                    <button 
+                      onClick={() => setShowProviderModal(false)}
+                      className="flex-1 bg-slate-800 text-slate-300 hover:bg-slate-700 py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Application Details Modal */}
+            {showApplicationModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                  <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <FileSignature className="h-5 w-5 text-[#F27D26]" />
+                      مراجعة طلب الانضمام
+                    </h3>
+                    <button onClick={() => setShowApplicationModal(null)} className="p-1 hover:bg-white/10 rounded-lg">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto space-y-4 text-right" dir="rtl">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-950 p-3 rounded-lg border border-white/5">
+                        <div className="text-xs text-slate-400">اسم مقدم الطلب</div>
+                        <div className="font-bold text-white mt-1">{showApplicationModal.name}</div>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-lg border border-white/5">
+                        <div className="text-xs text-slate-400">رقم الهاتف</div>
+                        <div className="font-bold font-mono text-white mt-1">{showApplicationModal.phone}</div>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-lg border border-white/5">
+                        <div className="text-xs text-slate-400">الفئة المطلوبة</div>
+                        <div className="text-white mt-1">{showApplicationModal.category}</div>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-lg border border-white/5">
+                        <div className="text-xs text-slate-400">المحافظة</div>
+                        <div className="text-white mt-1">{showApplicationModal.governorate}</div>
+                      </div>
+                      <div className="col-span-2 bg-slate-950 p-3 rounded-lg border border-white/5">
+                        <div className="text-xs text-slate-400">تفاصيل إضافية</div>
+                        <div className="text-white mt-1">{showApplicationModal.details || 'لا توجد'}</div>
+                      </div>
+                      {showApplicationModal.documentUrl && (
+                        <div className="col-span-2">
+                          <a href={showApplicationModal.documentUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex items-center gap-2">
+                            <Download className="w-4 h-4" /> عرض المستندات المرفقة
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {showApplicationModal.status === 'pending' && (
+                    <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3">
+                      <button 
+                        onClick={async () => {
+                          // Approve: Update app status, create provider
+                          await updateProviderApplication(showApplicationModal.id, { status: 'approved' });
+                          await addServiceProvider({
+                            name: showApplicationModal.name,
+                            category: showApplicationModal.category,
+                            governorate: showApplicationModal.governorate,
+                            city: '',
+                            address: '',
+                            description: showApplicationModal.details || '',
+                            logo: '',
+                            coverImage: '',
+                            yearsOfExperience: 0,
+                            status: 'نشط'
+                          });
+                          setShowApplicationModal(null);
+                          loadAdminData();
+                        }}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-4 h-4" /> قبول وإنشاء حساب
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          const reason = window.prompt('سبب الرفض:');
+                          if (reason !== null) {
+                            await updateProviderApplication(showApplicationModal.id, { status: 'rejected', rejectionReason: reason });
+                            setShowApplicationModal(null);
+                            loadAdminData();
+                          }
+                        }}
+                        className="flex-1 bg-rose-600/20 text-rose-400 border border-rose-500/20 hover:bg-rose-600 hover:text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+                      >
+                        <Ban className="w-4 h-4" /> رفض
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
-
         {/* AGREEMENTS VIEW */}
-        {adminView === "agreements" && selectedAgreementId ? (
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-4 sm:p-6 overflow-hidden">
-             <ElectronicAgreementView
-               agreementId={selectedAgreementId}
-               lang="ar"
-               onBack={() => setSelectedAgreementId(null)}
-             />
-          </div>
-        ) : adminView === "agreements" && (
+        {adminView === "agreements" && (
           <div className="space-y-6 animate-fade-in">
             <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6 flex justify-between items-center">
               <div>
                 <h2 className="text-base font-bold text-white mb-1">
-                  المكاتبات الإلكترونية
+                  طلبات المخاطبات (المكاتبات)
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  مراجعة والتحقق من صحة المكاتبات التي تمت بين البائع والمشتري
+                  مراجعة واعتماد طلبات المكاتبات الإلكترونية
                 </p>
               </div>
             </div>
-
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5">
-              <table className="w-full  text-right text-xs">
+              <table className="w-full text-right text-xs">
                 <thead className="bg-slate-950/80">
                   <tr className="border-b border-white/5 text-slate-400">
-                    <th className="py-3 px-4 font-normal">رقم الوثيقة</th>
-                    <th className="py-3 px-4 font-normal">البائع</th>
-                    <th className="py-3 px-4 font-normal">المشتري</th>
-                    <th className="py-3 px-4 font-normal">السعر (د.ع)</th>
-                    <th className="py-3 px-4 font-normal">تاريخ الإصدار</th>
-                    <th className="py-3 px-4 font-normal">الدفع</th>
+                    <th className="py-3 px-4 font-normal">الرقم التسلسلي</th>
+                    <th className="py-3 px-4 font-normal">اسم المشتري</th>
+                    <th className="py-3 px-4 font-normal">اسم البائع</th>
+                    <th className="py-3 px-4 font-normal">السعر المتفق عليه</th>
+                    <th className="py-3 px-4 font-normal">تاريخ الإرسال</th>
                     <th className="py-3 px-4 font-normal">الحالة</th>
                     <th className="py-3 px-4 font-normal">إجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {agreements.map((agr: any) => (
+                  {agreementRequests.map((agr) => (
                     <tr key={agr.id} className="text-slate-300 hover:bg-white/[0.02]">
-                      <td className="py-3 px-4 font-mono text-[#F27D26]">
-                        {agr.serialNumber}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-white">
-                        {agr.sellerName}
-                      </td>
+                      <td className="py-3 px-4 font-bold text-white font-mono">{agr.serialNumber}</td>
                       <td className="py-3 px-4">{agr.buyerName}</td>
-                      <td className="py-3 px-4 font-sans text-white">
-                        {agr.agreedPrice?.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 font-sans">
-                        {new Date(agr.createdAt).toLocaleDateString("en-GB")}
-                      </td>
+                      <td className="py-3 px-4">{agr.sellerName}</td>
+                      <td className="py-3 px-4 font-mono text-emerald-400">{agr.agreedPrice} د.ع</td>
+                      <td className="py-3 px-4">{agr.createdAt ? new Date(agr.createdAt).toLocaleDateString('en-GB') : 'غير متوفر'}</td>
                       <td className="py-3 px-4">
-                        {agr.buyerPaid && agr.sellerPaid ? (
-                           <span className="text-emerald-400 font-bold">مدفوعة</span>
-                        ) : (
-                           <span className="text-amber-400 font-bold">بانتظار الدفع</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded ${agr.status === 'active' ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
+                        <span className={`${agr.status === 'active' ? 'text-emerald-400 bg-emerald-500/10' : (agr.status === 'pending_approval' ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 bg-slate-800')} px-2 py-1 rounded`}>
                           {agr.status === 'active' ? 'سارية' : (agr.status === 'pending_approval' ? 'معلقة' : agr.status)}
                         </span>
                       </td>
                       <td className="py-3 px-4 flex gap-2">
                         <button 
-                          onClick={() => setSelectedAgreementId(agr.id)}
+                          onClick={() => setSelectedAgreementRequest(agr)}
                           className="text-blue-400 hover:text-blue-300"
                         >
-                          عرض
+                          عرض التفاصيل
                         </button>
                       </td>
                     </tr>
                   ))}
-                  {agreements.length === 0 && (
+                  {agreementRequests.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-slate-500">لا توجد مكاتبات</td>
+                      <td colSpan={7} className="py-6 text-center text-slate-500">لا توجد مكاتبات</td>
                     </tr>
                   )}
                 </tbody>
@@ -2770,7 +2887,7 @@ export default function AdminPortal({
             </div>
           </div>
         )}
-
+        
         {/* AGREEMENT PAYMENTS VIEW */}
         {adminView === "agreement-payments" && (
           <div className="space-y-6 animate-fade-in">
@@ -2805,13 +2922,13 @@ export default function AdminPortal({
                       className="text-slate-300 hover:bg-white/[0.02]"
                     >
                       <td className="py-3 px-4 font-bold text-white">
-                        {req.payerName}
+                        {req.payerName || req.buyerName || 'غير متوفر'}
                       </td>
                       <td className="py-3 px-4 font-mono text-slate-400">
-                        {req.phone}
+                        {req.payerPhone || req.buyerPhone || 'غير متوفر'}
                       </td>
                       <td className="py-3 px-4">
-                        {req.method === "zain_cash" ? (
+                        {req.paymentMethod === 'zain_cash' ? (
                           <span className="flex items-center gap-1.5">
                             <span className="w-5 h-5 bg-red-500/20 text-red-400 rounded flex items-center justify-center font-bold text-xs">
                               Z
@@ -2828,9 +2945,9 @@ export default function AdminPortal({
                         )}
                       </td>
                       <td className="py-3 px-4 font-sans text-white">
-                        {req.amount}
+                        {req.paymentAmount || '25000'}
                       </td>
-                      <td className="py-3 px-4 font-sans">{req.date}</td>
+                      <td className="py-3 px-4 font-sans">{req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB') : 'غير متوفر'}</td>
                       <td className="py-3 px-4">
                         {req.status === "pending" && (
                           <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
@@ -2850,7 +2967,7 @@ export default function AdminPortal({
                       </td>
                       <td className="py-3 px-4 flex gap-2">
                         <button
-                          onClick={() => setSelectedPaymentProof(req)}
+                          onClick={() => setSelectedAgreementRequest(req)}
                           className="text-blue-400 hover:text-blue-300"
                         >
                           عرض الإثبات
@@ -3127,18 +3244,46 @@ export default function AdminPortal({
                 </div>
               </div>
 
-              {/* Approve & Delete inside details */}
-              <div className="border-t border-white/5 pt-5 flex justify-end gap-3">
-                {!selectedInspectProperty.isApproved && (
+                            {/* Approve & Delete inside details */}
+              <div className="border-t border-white/5 pt-5 flex flex-wrap justify-end gap-3">
+                <button
+                  onClick={() => {
+                    if (isEditingProperty) {
+                      handleSaveEditProperty();
+                    } else {
+                      setEditPropForm(selectedInspectProperty);
+                      setIsEditingProperty(true);
+                    }
+                  }}
+                  className="rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>{isEditingProperty ? 'حفظ التعديلات' : 'تعديل التفاصيل'}</span>
+                </button>
+                <button
+                  onClick={() => handleToggleFeatured(selectedInspectProperty)}
+                  className={`rounded-xl px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer ${selectedInspectProperty.isFeatured ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-300'}`}
+                >
+                  <Star className="h-4 w-4" />
+                  <span>{selectedInspectProperty.isFeatured ? 'إلغاء التمييز' : 'تمييز العقار'}</span>
+                </button>
+                <button
+                  onClick={() => handleToggleSuspend(selectedInspectProperty)}
+                  className={`rounded-xl px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer ${selectedInspectProperty.isSuspended ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' : 'bg-orange-500/20 text-orange-400'}`}
+                >
+                  <Ban className="h-4 w-4" />
+                  <span>{selectedInspectProperty.isSuspended ? 'إعادة التفعيل' : 'تعليق / إخفاء'}</span>
+                </button>
+                {!selectedInspectProperty.isApproved && !selectedInspectProperty.isSuspended && (
                   <button
                     onClick={() => {
                       handleApproveProperty(selectedInspectProperty.id);
-                      setSelectedInspectProperty(null);
+                      setSelectedInspectProperty({ ...selectedInspectProperty, isApproved: true });
                     }}
                     className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-[#ffffff] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Check className="h-4 w-4" />
-                    <span>موافقة ونشر للعقارات العامة</span>
+                    <span>موافقة ونشر</span>
                   </button>
                 )}
                 <button
@@ -3149,16 +3294,117 @@ export default function AdminPortal({
                   className="rounded-xl bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 text-rose-400 hover:text-white px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span>حذف وإلغاء العقار</span>
+                  <span>حذف نهائي</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedInspectProperty(null)}
+                  onClick={() => { setSelectedInspectProperty(null); setIsEditingProperty(false); }}
                   className="rounded-xl border border-white/5 bg-white/5 px-5 py-3 text-xs font-bold text-slate-300 hover:bg-white/10 transition-all"
                 >
-                  إغلاق نافذة المعاينة
+                  إغلاق
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agreement Request Details Modal */}
+      {selectedAgreementRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <FileSignature className="h-5 w-5 text-[#F27D26]" />
+                تفاصيل طلب المخاطبة (المكاتبة)
+              </h3>
+              <button onClick={() => setSelectedAgreementRequest(null)} className="p-1 hover:bg-white/10 rounded-lg">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6 text-right" dir="rtl">
+              {/* Reference and Serial */}
+              <div className="flex justify-between items-start bg-slate-950 p-4 rounded-xl border border-white/5">
+                <div className="space-y-2">
+                  <div className="text-sm"><span className="text-slate-400">الرقم التسلسلي (Serial):</span> <span className="font-mono text-white bg-white/5 px-2 py-1 rounded">{selectedAgreementRequest.serialNumber}</span></div>
+                  <div className="text-sm"><span className="text-slate-400">الرقم المرجعي (Reference):</span> <span className="font-mono text-white bg-white/5 px-2 py-1 rounded">{selectedAgreementRequest.referenceNumber || 'لا يوجد'}</span></div>
+                  <div className="text-sm"><span className="text-slate-400">تاريخ الطلب:</span> <span className="text-white">{selectedAgreementRequest.createdAt ? new Date(selectedAgreementRequest.createdAt).toLocaleString('en-GB') : 'غير متوفر'}</span></div>
+                </div>
+                <div className="bg-white p-2 rounded-lg">
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${selectedAgreementRequest.serialNumber}`} alt="QR Code" className="w-20 h-20" />
+                </div>
+              </div>
+
+              {/* Parties */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                  <h4 className="font-bold text-[#F27D26] mb-3 border-b border-white/10 pb-2">معلومات المشتري (مقدم الطلب)</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="text-slate-400">الاسم:</span> <span className="text-white">{selectedAgreementRequest.buyerName}</span></div>
+                    <div><span className="text-slate-400">الهاتف:</span> <span className="text-white font-mono">{selectedAgreementRequest.buyerPhone}</span></div>
+                  </div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                  <h4 className="font-bold text-[#F27D26] mb-3 border-b border-white/10 pb-2">معلومات البائع</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="text-slate-400">الاسم:</span> <span className="text-white">{selectedAgreementRequest.sellerName}</span></div>
+                    <div><span className="text-slate-400">الهاتف:</span> <span className="text-white font-mono">{selectedAgreementRequest.sellerPhone}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Property Details */}
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5 space-y-2 text-sm">
+                <h4 className="font-bold text-[#F27D26] mb-3 border-b border-white/10 pb-2">تفاصيل العقار والاتفاق</h4>
+                <div><span className="text-slate-400">تفاصيل العقار:</span> <span className="text-white">{selectedAgreementRequest.propertyDetails}</span></div>
+                <div><span className="text-slate-400">عنوان العقار:</span> <span className="text-white">{selectedAgreementRequest.propertyAddress}</span></div>
+                <div><span className="text-slate-400">السعر المتفق عليه:</span> <span className="text-emerald-400 font-bold">{selectedAgreementRequest.agreedPrice} د.ع</span></div>
+                <div><span className="text-slate-400">مبلغ العربون:</span> <span className="text-emerald-400 font-bold">{selectedAgreementRequest.depositAmount} د.ع</span></div>
+                <div><span className="text-slate-400">الشروط الإضافية:</span> <span className="text-white">{selectedAgreementRequest.conditions || 'لا توجد'}</span></div>
+                <div><span className="text-slate-400">مدة الصلاحية:</span> <span className="text-white">{selectedAgreementRequest.validityDays} أيام</span></div>
+              </div>
+
+              {/* Payment Details */}
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5 space-y-2 text-sm">
+                <h4 className="font-bold text-[#F27D26] mb-3 border-b border-white/10 pb-2 flex items-center gap-2"><CreditCard className="w-4 h-4" /> معلومات الدفع</h4>
+                <div><span className="text-slate-400">طريقة الدفع:</span> <span className="text-white">{selectedAgreementRequest.paymentMethod === 'zain_cash' ? 'زين كاش' : (selectedAgreementRequest.paymentMethod === 'qi_card' ? 'ماستر كارد' : selectedAgreementRequest.paymentMethod)}</span></div>
+                <div><span className="text-slate-400">اسم الدافع:</span> <span className="text-white">{selectedAgreementRequest.payerName || selectedAgreementRequest.buyerName}</span></div>
+                <div><span className="text-slate-400">هاتف الدافع:</span> <span className="text-white font-mono">{selectedAgreementRequest.payerPhone || selectedAgreementRequest.buyerPhone}</span></div>
+                <div><span className="text-slate-400">المبلغ المدفوع:</span> <span className="text-emerald-400 font-bold">{selectedAgreementRequest.paymentAmount || '25000'} د.ع</span></div>
+                {selectedAgreementRequest.paymentProofUrl && (
+                  <div className="mt-4">
+                    <span className="text-slate-400 block mb-2">المرفقات (إثبات الدفع):</span>
+                    <a href={selectedAgreementRequest.paymentProofUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">عرض المرفق</a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3">
+              <button 
+                onClick={async () => {
+                  await updateAgreementStatus(selectedAgreementRequest.id, 'active');
+                  setSelectedAgreementRequest(null);
+                  const allAgreements = await fetchAgreements();
+                  setAgreementRequests(allAgreements);
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" /> اعتماد المكاتبة
+              </button>
+              <button 
+                onClick={async () => {
+                  await updateAgreementStatus(selectedAgreementRequest.id, 'rejected');
+                  setSelectedAgreementRequest(null);
+                  const allAgreements = await fetchAgreements();
+                  setAgreementRequests(allAgreements);
+                }}
+                className="flex-1 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-500/20 py-2 rounded-xl font-bold flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" /> رفض الطلب
+              </button>
             </div>
           </div>
         </div>

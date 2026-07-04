@@ -43,7 +43,7 @@ import VerifyAgreement from "./components/VerifyAgreement";
 import ElectronicAgreementForm from "./components/ElectronicAgreementForm";
 import ElectronicAgreementView from "./components/ElectronicAgreementView";
 import MyAgreementsList from "./components/MyAgreementsList";
-import { MapLocationPicker } from "./components/MapLocationPicker";
+import { SmartLocationPicker } from "./components/SmartLocationPicker";
 import MapSearch from "./components/MapSearch";
 import { Property, CompletedDeal, ContactMessage, Agent } from "./types";
 import {
@@ -145,15 +145,8 @@ export default function App() {
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [newSpace, setNewSpace] = useState("");
-  const [newGov, setNewGov] = useState("");
-  const [newDist, setNewDist] = useState("");
-  const [newSubDist, setNewSubDist] = useState("");
-  const [newNeigh, setNewNeigh] = useState("");
-  const [newAddress, setNewAddress] = useState("");
-  const [newCoordinates, setNewCoordinates] = useState({
-    lat: 33.3152,
-    lng: 44.3661,
-  });
+  const [newLocationData, setNewLocationData] = useState<any>(null);
+  const [isLocationValid, setIsLocationValid] = useState(false);
   const [newBuildingType, setNewBuildingType] = useState("منزل");
   const [newStatus, setNewStatus] = useState<any>("للبيع");
   const [newAuctionStart, setNewAuctionStart] = useState("");
@@ -306,46 +299,9 @@ export default function App() {
   }, [lang]);
 
   // Sync Locations Dropdowns for Add Property Form
-  useEffect(() => {
-    if (newGov) {
-      const matchedGov = IRAQ_LOCATIONS.find((g) => g.governorate === newGov);
-      setDistrictsList(matchedGov ? matchedGov.districts : []);
-      setNewDist("");
-      setNewSubDist("");
-      setNewNeigh("");
-    } else {
-      setDistrictsList([]);
-      setNewDist("");
-      setNewSubDist("");
-      setNewNeigh("");
-    }
-  }, [newGov]);
+  
 
-  useEffect(() => {
-    if (newDist && districtsList.length > 0) {
-      const matchedDist = districtsList.find((d) => d.name === newDist);
-      setSubDistrictsList(matchedDist ? matchedDist.subDistricts : []);
-      setNewSubDist("");
-      setNewNeigh("");
-    } else {
-      setSubDistrictsList([]);
-      setNewSubDist("");
-      setNewNeigh("");
-    }
-  }, [newDist, districtsList]);
-
-  useEffect(() => {
-    if (newSubDist && subDistrictsList.length > 0) {
-      const matchedSubDist = subDistrictsList.find(
-        (s) => s.name === newSubDist,
-      );
-      setNeighborhoodsList(matchedSubDist ? matchedSubDist.neighborhoods : []);
-      setNewNeigh("");
-    } else {
-      setNeighborhoodsList([]);
-      setNewNeigh("");
-    }
-  }, [newSubDist, subDistrictsList]);
+  
 
   const saveFavorites = (newFavs: Property[]) => {
     setFavorites(newFavs);
@@ -597,17 +553,7 @@ export default function App() {
     setAddError("");
     setAddSuccess(false);
 
-    if (
-      !newTitle ||
-      !newDesc ||
-      !newPrice ||
-      !newSpace ||
-      !newGov ||
-      !newDist ||
-      !newSubDist ||
-      !newNeigh ||
-      !newAddress
-    ) {
+    if (!newTitle || !newDesc || !newPrice || !newSpace || !isLocationValid) {
       setAddError(
         lang === "ar"
           ? "يرجى ملء كافة تفاصيل العنوان والموقع المحددة!"
@@ -633,12 +579,7 @@ export default function App() {
         space: parsedSpace,
         status: newStatus,
         isFeatured: false,
-        governorate: newGov,
-        district: newDist,
-        subDistrict: newSubDist,
-        neighborhood: newNeigh,
-        address: newAddress,
-        coordinates: newCoordinates,
+        ...newLocationData,
         bedrooms: parseInt(newBedrooms),
         bathrooms: parseInt(newBathrooms),
         livingRooms: parseInt(newLivingRooms),
@@ -688,7 +629,7 @@ export default function App() {
       setNewDesc("");
       setNewPrice("");
       setNewSpace("");
-      setNewAddress("");
+      
       setNewVideoUrl("");
       setNewImageUrl("");
       setUploadedImages([]);
@@ -1929,138 +1870,9 @@ export default function App() {
                     </span>
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                    {/* Governorate Select */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        {t.governorate}
-                      </label>
-                      <select
-                        required
-                        value={newGov}
-                        onChange={(e) => setNewGov(e.target.value)}
-                        className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
-                      >
-                        <option value="">
-                          {lang === "ar"
-                            ? "-- اختر المحافظة --"
-                            : "-- Choose Gov --"}
-                        </option>
-                        {IRAQ_LOCATIONS?.map((g) => (
-                          <option key={g.governorate} value={g.governorate}>
-                            {g.governorate}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* District Select */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        {t.district}
-                      </label>
-                      <select
-                        required
-                        disabled={!newGov}
-                        value={newDist}
-                        onChange={(e) => setNewDist(e.target.value)}
-                        className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
-                      >
-                        <option value="">
-                          {lang === "ar"
-                            ? "-- اختر القضاء --"
-                            : "-- Choose Dist --"}
-                        </option>
-                        {districtsList?.map((d) => (
-                          <option key={d.name} value={d.name}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Sub-district Select */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        {t.subDistrict}
-                      </label>
-                      <select
-                        required
-                        disabled={!newDist}
-                        value={newSubDist}
-                        onChange={(e) => setNewSubDist(e.target.value)}
-                        className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
-                      >
-                        <option value="">
-                          {lang === "ar"
-                            ? "-- اختر الناحية --"
-                            : "-- Choose SubDist --"}
-                        </option>
-                        {subDistrictsList?.map((s) => (
-                          <option key={s.name} value={s.name}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Neighborhood Select */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        {t.neighborhood}
-                      </label>
-                      <select
-                        required
-                        disabled={!newSubDist}
-                        value={newNeigh}
-                        onChange={(e) => setNewNeigh(e.target.value)}
-                        className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
-                      >
-                        <option value="">
-                          {lang === "ar"
-                            ? "-- اختر الحي --"
-                            : "-- Choose Area --"}
-                        </option>
-                        {neighborhoodsList?.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">
-                      {t.addressLabel}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={
-                        lang === "ar"
-                          ? "مثال: قرب مسجد التقوى، شارع الأطباء"
-                          : "e.g. Near Al-Taqwa Mosque, Doctors Street"
-                      }
-                      value={newAddress}
-                      onChange={(e) => setNewAddress(e.target.value)}
-                      className="w-full rounded-lg border border-white/5 bg-slate-900 px-3.5 py-1.5 text-xs text-white placeholder-slate-600 outline-none focus:border-[#F27D26]/40"
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <label className="block text-xs text-slate-400 mb-2">
-                      {lang === "ar"
-                        ? "حدد الموقع الدقيق على الخريطة"
-                        : "Pin Exact Location on Map"}
-                    </label>
-                    <MapLocationPicker
-                      initialLocation={newCoordinates}
-                      onLocationSelect={(loc) => setNewCoordinates(loc)}
-                    />
-                  </div>
+                  <SmartLocationPicker onChange={(loc, isValid) => { setNewLocationData(loc); setIsLocationValid(isValid); }} lang={lang} />
                 </div>
-
+                
                 {/* Specs Grid */}
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 bg-slate-900/40 rounded-xl p-4 border border-white/5">
                   <div>

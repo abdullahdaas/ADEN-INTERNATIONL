@@ -45,7 +45,7 @@ export default function Header({
   const navItems = [
     { id: 'home', label: t.home, icon: Home },
     { id: 'listings', label: t.listings, icon: Search },
-    { id: 'service-providers', label: lang === 'ar' ? 'الخدمات العقارية' : lang === 'en' ? 'Services' : 'خزمەتگوزارییەکان', icon: Briefcase },
+    { id: 'service-providers', label: lang === 'ar' ? 'مزودي الخدمات' : lang === 'en' ? 'Service Providers' : 'پێشکەشکارانی خزمەتگوزاری', icon: Briefcase },
     { id: 'map-search', label: lang === 'ar' ? 'الخريطة' : 'Map', icon: Search },
     { id: 'verify-agreement', label: lang === 'ar' ? 'تحقق من مكاتبة' : lang === 'en' ? 'Verify Agreement' : 'پشکنینی بەڵگەنامە', icon: FileCheck },
     ...(user?.role === 'citizen' ? [

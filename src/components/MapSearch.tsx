@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMapEvents } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Property } from '../types';
+import { IRAQ_BOUNDS } from '../data/iraqLocations';
 import { formatPrice } from './PropertyCard';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
 import { Search, Navigation } from 'lucide-react';
@@ -13,6 +15,14 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
+
+const createClusterCustomIcon = function (cluster: any) {
+  return L.divIcon({
+    html: `<div class="w-10 h-10 bg-[#F27D26] text-white rounded-full flex items-center justify-center font-bold border-2 border-white shadow-lg text-sm">${cluster.getChildCount()}</div>`,
+    className: 'custom-marker-cluster',
+    iconSize: L.point(40, 40, true),
+  });
+};
 
 // Custom Icon for properties
 const createCustomIcon = (status: string, isSelected: boolean) => {
@@ -124,12 +134,36 @@ export default function MapSearch({ properties, onSelectProperty }: MapSearchPro
         <MapContainer
           center={[33.3152, 44.3661]} // Baghdad default
           zoom={6}
+          minZoom={5}
+          maxBounds={[[IRAQ_BOUNDS.south, IRAQ_BOUNDS.west], [IRAQ_BOUNDS.north, IRAQ_BOUNDS.east]]}
           style={{ height: '100%', width: '100%', zIndex: 1 }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          />
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="CartoDB Positron (الافتراضية)">
+              <TileLayer
+                attribution='&copy; OpenStreetMap &copy; CartoDB'
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Esri World Imagery (قمر صناعي)">
+              <TileLayer
+                attribution='&copy; Esri'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="OpenTopoMap (تضاريس)">
+              <TileLayer
+                attribution='&copy; OpenTopoMap'
+                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+              />
+            </LayersControl.BaseLayer>
+          </LayersControl>
+          <MarkerClusterGroup
+            chunkedLoading
+            iconCreateFunction={createClusterCustomIcon}
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom={true}
+          >
           {filteredProperties?.map((p) => (
             <Marker 
               key={p.id} 
@@ -159,6 +193,7 @@ export default function MapSearch({ properties, onSelectProperty }: MapSearchPro
               </Popup>
             </Marker>
           ))}
+        </MarkerClusterGroup>
         </MapContainer>
       </div>
     </div>

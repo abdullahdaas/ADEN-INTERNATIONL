@@ -95,6 +95,12 @@ export default function ElectronicAgreementForm({
         conditions: formData.conditions,
         validityDays: formData.validityDays,
         initiatorId: user?.id || 'anonymous',
+        paymentMethod: paymentMethod,
+        payerName: paymentData.payerName,
+        payerPhone: paymentData.payerPhone,
+        paymentAmount: paymentData.amount,
+        paymentProofUrl: paymentData.proofFile ? URL.createObjectURL(paymentData.proofFile) : '', // mockup url
+        referenceNumber: 'REF-' + Math.floor(100000 + Math.random() * 900000),
         counterpartyPhone: formData.buyerPhone
       };
 

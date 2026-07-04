@@ -7,6 +7,7 @@ import {
 import { Property, PaymentProof, CitizenProfile } from '../types';
 import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments } from '../utils/api';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
+import { SmartLocationPicker } from './SmartLocationPicker';
 
 interface CitizenPropertiesProps {
   user: { name: string; role: 'citizen'; emailOrPhone?: string };
@@ -41,11 +42,8 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
   const [editSpace, setEditSpace] = useState('');
   const [editStatus, setEditStatus] = useState<any>('للبيع');
   const [editBuildingType, setEditBuildingType] = useState('منزل');
-  const [editGov, setEditGov] = useState('');
-  const [editDist, setEditDist] = useState('');
-  const [editSubDist, setEditSubDist] = useState('');
-  const [editNeigh, setEditNeigh] = useState('');
-  const [editAddress, setEditAddress] = useState('');
+  const [editLocationData, setEditLocationData] = useState<any>(null);
+  const [isEditLocationValid, setIsEditLocationValid] = useState(true);
   const [editBedrooms, setEditBedrooms] = useState(1);
   const [editBathrooms, setEditBathrooms] = useState(1);
   const [editLivingRooms, setEditLivingRooms] = useState(1);
@@ -156,37 +154,13 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
   }, [user]);
 
   // Sync Districts list based on Governorate
-  useEffect(() => {
-    if (editGov) {
-      const matchedGov = IRAQ_LOCATIONS.find(g => g.governorate === editGov);
-      setDistrictsList(matchedGov ? matchedGov.districts : []);
-    } else {
-      setDistrictsList([]);
-    }
-  }, [editGov]);
+  
 
   // Sync Sub-Districts list based on District
-  useEffect(() => {
-    if (editDist && editGov) {
-      const matchedGov = IRAQ_LOCATIONS.find(g => g.governorate === editGov);
-      const matchedDist = matchedGov?.districts.find(d => d.name === editDist);
-      setSubDistrictsList(matchedDist ? matchedDist.subDistricts : []);
-    } else {
-      setSubDistrictsList([]);
-    }
-  }, [editDist, editGov]);
+  
 
   // Sync Neighborhoods list based on Sub-District
-  useEffect(() => {
-    if (editSubDist && editDist && editGov) {
-      const matchedGov = IRAQ_LOCATIONS.find(g => g.governorate === editGov);
-      const matchedDist = matchedGov?.districts.find(d => d.name === editDist);
-      const matchedSubDist = matchedDist?.subDistricts.find(s => s.name === editSubDist);
-      setNeighborhoodsList(matchedSubDist ? matchedSubDist.neighborhoods : []);
-    } else {
-      setNeighborhoodsList([]);
-    }
-  }, [editSubDist, editDist, editGov]);
+  
 
   // Handle proof image upload
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,11 +234,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
     setEditSpace(prop.space.toString());
     setEditStatus(prop.status);
     setEditBuildingType(prop.buildingType);
-    setEditGov(prop.governorate);
-    setEditDist(prop.district);
-    setEditSubDist(prop.subDistrict);
-    setEditNeigh(prop.neighborhood);
-    setEditAddress(prop.address);
+    
     setEditBedrooms(prop.bedrooms);
     setEditBathrooms(prop.bathrooms);
     setEditLivingRooms(prop.livingRooms);
@@ -297,11 +267,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
         space: parsedSpace,
         status: editStatus,
         buildingType: editBuildingType,
-        governorate: editGov,
-        district: editDist,
-        subDistrict: editSubDist,
-        neighborhood: editNeigh,
-        address: editAddress,
+        ...editLocationData,
         bedrooms: editBedrooms,
         bathrooms: editBathrooms,
         livingRooms: editLivingRooms,
@@ -883,95 +849,13 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   <span>تعديل وتدقيق الموقع الجغرافي العراقي:</span>
                 </h4>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">المحافظة</label>
-                    <select
-                      required
-                      value={editGov}
-                      onChange={(e) => {
-                        setEditGov(e.target.value);
-                        setEditDist('');
-                        setEditSubDist('');
-                        setEditNeigh('');
-                      }}
-                      className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
-                    >
-                      <option value="">-- اختر المحافظة --</option>
-                      {IRAQ_LOCATIONS?.map((g) => (
-                        <option key={g.governorate} value={g.governorate}>{g.governorate}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">القضاء</label>
-                    <select
-                      required
-                      value={editDist}
-                      onChange={(e) => {
-                        setEditDist(e.target.value);
-                        setEditSubDist('');
-                        setEditNeigh('');
-                      }}
-                      className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
-                      disabled={!editGov}
-                    >
-                      <option value="">-- اختر القضاء --</option>
-                      {districtsList?.map((d) => (
-                        <option key={d.name} value={d.name}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">الناحية / الحي</label>
-                    <select
-                      required
-                      value={editSubDist}
-                      onChange={(e) => {
-                        setEditSubDist(e.target.value);
-                        setEditNeigh('');
-                      }}
-                      className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
-                      disabled={!editDist}
-                    >
-                      <option value="">-- اختر الناحية --</option>
-                      {subDistrictsList?.map((s) => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">المحلة / الحي التفصيلي</label>
-                    <select
-                      required
-                      value={editNeigh}
-                      onChange={(e) => setEditNeigh(e.target.value)}
-                      className="w-full rounded-lg border border-white/5 bg-slate-900 px-2 py-1.5 text-xs text-white outline-none cursor-pointer"
-                      disabled={!editSubDist}
-                    >
-                      <option value="">-- اختر المحلة --</option>
-                      {neighborhoodsList?.map((n) => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">العنوان التفصيلي وأقرب نقطة دالة</label>
-                  <input
-                    type="text"
-                    required
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
-                    className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-1.5 text-xs text-white outline-none focus:border-[#F27D26]/40"
-                  />
-                </div>
+                <SmartLocationPicker 
+                      initialLocation={editLocationData} 
+                      onChange={(loc, isValid) => { setEditLocationData(loc); setIsEditLocationValid(isValid); }} 
+                      lang={lang} 
+                    />
               </div>
-
+              
               {/* Specs & Features Grid */}
               <div className="bg-slate-950 rounded-xl p-4 border border-white/5">
                 <h4 className="text-xs font-bold text-[#F27D26] mb-3 flex items-center gap-1">

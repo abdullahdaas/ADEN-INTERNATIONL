@@ -1,19 +1,21 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/utils/api.ts', 'utf-8');
+let code = fs.readFileSync('src/utils/api.ts', 'utf8');
 
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/properties\?\$\{params\.toString\(\)\}\`\)/, "fetch(`${API_BASE}/properties?${params.toString()}`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/properties\/\$\{id\}\`\)/, "fetch(`${API_BASE}/properties/${id}`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/agents\`\)/g, "fetch(`${API_BASE}/agents`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/agents\/\$\{id\}\`\)/g, "fetch(`${API_BASE}/agents/${id}`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/deals\`\)/g, "fetch(`${API_BASE}/deals`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/messages\`\)/g, "fetch(`${API_BASE}/messages`, { headers: getAuthHeadersGET() })");
-code = code.replace(/method: 'PUT'\n\s+\}\)/g, "method: 'PUT',\n    headers: getAuthHeaders()\n  })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/stats\`\)/g, "fetch(`${API_BASE}/stats`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/supervisors\`\)/g, "fetch(`${API_BASE}/supervisors`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/supervisors\/\$\{id\}\`,\s*\{\n\s*method: 'DELETE'\n\s*\}\)/, "fetch(`${API_BASE}/supervisors/${id}`, {\n    method: 'DELETE',\n    headers: getAuthHeaders()\n  })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/profiles\/\$\{encodeURIComponent\(identity\)\}\`\)/, "fetch(`${API_BASE}/profiles/${encodeURIComponent(identity)}`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/profiles\`\)/, "fetch(`${API_BASE}/profiles`, { headers: getAuthHeadersGET() })");
-code = code.replace(/fetch\(\`\$\{API_BASE\}\/settings\`\)/, "fetch(`${API_BASE}/settings`, { headers: getAuthHeadersGET() })");
-
-fs.writeFileSync('src/utils/api.ts', code);
-console.log('Patched API calls');
+if (!code.includes('fetchAgreements')) {
+  code += `\n\nexport const fetchAgreements = async (): Promise<any[]> => {
+  const res = await fetch('/api/agreements');
+  if (!res.ok) throw new Error('Failed to fetch agreements');
+  return res.json();
+};\n
+export const updateAgreementStatus = async (id: string, status: string): Promise<any> => {
+  const res = await fetch('/api/agreements/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!res.ok) throw new Error('Failed to update agreement');
+  return res.json();
+};\n`;
+  fs.writeFileSync('src/utils/api.ts', code);
+  console.log("Patched api.ts");
+}

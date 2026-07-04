@@ -1079,7 +1079,7 @@ export default function PropertyDetails({
             <h3 className="text-sm font-bold text-white border-b border-white/5 pb-3">موقع العقار والبيئة المحيطة</h3>
             
             {/* Visual Styled Map Mock Container */}
-            <MapDisplay location={property.coordinates} title={property.title} />
+            <MapDisplay property={property} />
 
             {/* Neighboring properties suggestion list */}
             {nearbyProps.length > 0 && (
