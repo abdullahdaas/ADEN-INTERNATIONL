@@ -15,7 +15,11 @@ export async function loginAdmin(username: string, password: string) {
 function getAuthHeaders(): HeadersInit {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   try {
-    const token = localStorage.getItem('aden-admin-token') || localStorage.getItem('aden_token');
+    let token = localStorage.getItem('aden-admin-token');
+    if (!token || token === 'undefined' || token === 'null') {
+      token = localStorage.getItem('aden_token');
+    }
+    if (token === 'undefined' || token === 'null') token = null;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -39,7 +43,11 @@ function getAuthHeaders(): HeadersInit {
 function getAuthHeadersGET(): HeadersInit {
   const headers: Record<string, string> = {};
   try {
-    const token = localStorage.getItem('aden-admin-token') || localStorage.getItem('aden_token');
+    let token = localStorage.getItem('aden-admin-token');
+    if (!token || token === 'undefined' || token === 'null') {
+      token = localStorage.getItem('aden_token');
+    }
+    if (token === 'undefined' || token === 'null') token = null;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -99,7 +107,7 @@ export async function updateProperty(id: string, property: Partial<Property>): P
   return res.json();
 }
 
-export async function deleteProperty(id: string, hard = false): Promise<boolean> {
+export async function deleteProperty(id: string, hard = false): Promise<boolean> { console.log('deleteProperty called. Token:', localStorage.getItem('aden-admin-token'), 'Headers:', getAuthHeaders());
   const res = await fetch(`${API_BASE}/properties/${id}${hard ? '?hard=true' : ''}`, {
     method: 'DELETE',
     headers: getAuthHeaders()

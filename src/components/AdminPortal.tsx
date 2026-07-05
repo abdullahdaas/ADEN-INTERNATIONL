@@ -299,7 +299,8 @@ export default function AdminPortal({
 
   // Re-check persistent storage login
   useEffect(() => {
-    if (localStorage.getItem("aden-admin-auth") === "true") {
+    const adminToken = localStorage.getItem("aden-admin-token");
+    if (localStorage.getItem("aden-admin-auth") === "true" && adminToken && adminToken !== "undefined") {
       setIsAuthenticated(true);
       const cached = localStorage.getItem("aden-user");
       if (cached && cached !== "undefined") {
@@ -386,6 +387,7 @@ export default function AdminPortal({
     setIsAuthenticated(false);
     localStorage.removeItem("aden-admin-auth");
     localStorage.removeItem("aden-admin-token");
+    localStorage.removeItem("aden-user");
     onLogout();
   };
 

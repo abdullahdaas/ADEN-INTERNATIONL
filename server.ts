@@ -124,13 +124,26 @@ app.use('/api/citizen-register', authLimiter);
 
 
 // RBAC Middlewares
+
 const requireAuth = (req, res, next) => {
-  if (!req.user) {
+  const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : 'none';
+  const user = req.user;
+  const isAdmin = user && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'supervisor');
+  
+  console.log(`[Auth Audit] ${req.method} ${req.url}`);
+  console.log(`  -> Token Received: ${token}`);
+  console.log(`  -> Authenticated User: ${user ? JSON.stringify(user) : 'None'}`);
+  console.log(`  -> isAdmin: ${isAdmin ? 'true' : 'false'}`);
+
+  if (!user) {
+    console.log(`  -> Authorization Failed: No valid user attached to request (Token invalid or missing)`);
     logSecurityEvent(req.ip, 'auth_failure', 'Unauthorized access attempt to ' + req.path);
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
+  
   next();
 };
+
 
 const requireAdmin = (req, res, next) => {
     if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.role !== 'supervisor')) {
