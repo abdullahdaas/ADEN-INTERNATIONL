@@ -27,7 +27,7 @@ export interface LocationHierarchy {
   }[];
 }
 
-export type PropertyStatus = 'للبيع' | 'للإيجار' | 'محجوز' | 'تم البيع' | 'تم التأجير' | 'مميز' | 'مزاد عقاري';
+export type PropertyStatus = 'للبيع' | 'للإيجار' | 'محجوز' | 'تم البيع' | 'تم التأجير' | 'مميز' | 'مزاد عقاري' | 'مرفوض';
 
 export interface Property {
   id: string;
@@ -418,7 +418,7 @@ export interface ElectronicAgreement {
   validityDays: number;
   initiatorId: string; // User ID who created it
   counterpartyPhone: string; // To notify/link the other party
-  status: 'pending_approval' | 'pending_payment' | 'active' | 'cancelled' | 'expired';
+  status: 'pending_approval' | 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'rejected' | 'archived' | 'deleted' | 'expired';
   cancellationReason?: string;
   paymentMethod?: string;
   payerName?: string;

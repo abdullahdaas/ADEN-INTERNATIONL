@@ -154,7 +154,7 @@ export function AdminGISPanel({ properties, onRefresh }: AdminGISPanelProps) {
                       <Popup>
                         <div className="w-48 p-0 flex flex-col gap-2 rounded text-right font-sans" dir="rtl">
                           <div className="font-bold text-slate-900 text-xs border-b pb-1 mb-1">{p.title}</div>
-                          {p.images?.[0] && <img src={p.images[0]} referrerPolicy="no-referrer" alt="" className="w-full h-24 object-cover rounded" />}
+                          {p.images?.[0] && <img loading="lazy" src={p.images[0]} referrerPolicy="no-referrer" alt="" className="w-full h-24 object-cover rounded" />}
                           <div className="font-bold text-[#F27D26] text-sm mt-1">{formatPrice(p.price, p.status)}</div>
                           <div className="text-[10px] text-slate-500">{p.space} م² • {p.buildingType}</div>
                         </div>

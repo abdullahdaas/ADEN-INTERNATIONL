@@ -82,7 +82,6 @@ export default function ElectronicAgreementForm({
     
     try {
       const agreementPayload = {
-        serialNumber: 'ADN-' + new Date().getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000),
         propertyId: property?.id,
         propertyDetails: formData.propertyDetails,
         propertyAddress: formData.propertyAddress,

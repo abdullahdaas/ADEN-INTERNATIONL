@@ -51,16 +51,14 @@ export default function PropertyCard({
   const handleWhatsapp = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Use proper phone based on agent (default to abdullah's phone)
-    const phone = property.agentId === 'ali_jassim' ? '9647701234567' : 
-                  property.agentId === 'zahra_salah' ? '9647809876543' : '9647810060292';
+    const phone = property.advertiserWhatsapp || property.advertiserPhone || '9647810060292';
     const msg = `السلام عليكم، أنا مهتم بعقاركم المعروض: "${property.title}" في ${property.governorate} - ${property.district} برمز: ${property.id}. يرجى تزويدي بمزيد من التفاصيل.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleCall = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = property.agentId === 'ali_jassim' ? '07701234567' : 
-                  property.agentId === 'zahra_salah' ? '07809876543' : '07810060292';
+    const phone = property.advertiserPhone || '07810060292';
     window.open(`tel:${phone}`, '_self');
   };
 
@@ -78,7 +76,7 @@ export default function PropertyCard({
 
       {/* Image Container */}
       <div className="relative h-64 w-full overflow-hidden bg-slate-950">
-        <img
+        <img loading="lazy"
           src={property.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&auto=format&fit=crop&q=80'}
           alt={property.title}
           referrerPolicy="no-referrer"

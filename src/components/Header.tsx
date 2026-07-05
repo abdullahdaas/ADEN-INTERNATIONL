@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Home, Search, Moon, Sun, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X } from 'lucide-react';
+import { Home, Search, Moon, Sun, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X, Bell, BellOff } from 'lucide-react';
 import { Property } from '../types';
 import { translations } from '../utils/translations';
+import { fetchNotifications, markNotificationRead } from '../utils/api';
+import { UserNotification } from '../types';
 import AdenLogo from './AdenLogo';
 
 interface HeaderProps {
@@ -41,6 +43,26 @@ export default function Header({
 }: HeaderProps) {
   const t = translations[lang];
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  React.useEffect(() => {
+    if (user) {
+      fetchNotifications().then(n => setNotifications(n)).catch(() => {});
+      const interval = setInterval(() => {
+        fetchNotifications().then(n => setNotifications(n)).catch(() => {});
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const unreadNotifs = notifications.filter(n => !n.isRead).length;
+
+  const handleReadNotification = async (id: string) => {
+    await markNotificationRead(id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
 
   const navItems = [
     { id: 'home', label: t.home, icon: Home },
@@ -163,6 +185,53 @@ export default function Header({
             <PlusCircle className="h-4 w-4" />
             <span>{t.addPropButton}</span>
           </button>
+
+          {/* Notifications Button */}
+          {user && (
+            <div className="relative">
+              <button
+                id="btn-notifications"
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 transition-all hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20"
+                title="الإشعارات"
+              >
+                <Bell className={`h-4 w-4 ${unreadNotifs > 0 ? 'fill-[#F27D26] text-[#F27D26] animate-pulse' : ''}`} />
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {unreadNotifs}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute top-12 left-0 sm:left-auto sm:-right-2 w-72 max-h-96 overflow-y-auto bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 p-2 text-right" dir="rtl">
+                  <div className="flex justify-between items-center px-2 py-1 mb-2 border-b border-white/10 pb-2">
+                    <span className="text-white font-bold text-sm">الإشعارات</span>
+                    <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="text-slate-400 text-xs text-center py-4 flex flex-col items-center gap-2">
+                      <BellOff className="h-6 w-6 opacity-20" />
+                      لا توجد إشعارات حالياً
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {notifications.map(n => (
+                        <div 
+                          key={n.id} 
+                          onClick={() => handleReadNotification(n.id)}
+                          className={`p-3 rounded-lg text-xs transition-colors cursor-pointer ${n.isRead ? 'bg-white/5 opacity-60' : 'bg-[#F27D26]/10 border border-[#F27D26]/20 hover:bg-[#F27D26]/20'}`}
+                        >
+                          <div className={`font-bold ${n.isRead ? 'text-slate-300' : 'text-[#F27D26]'}`}>{n.title}</div>
+                          <div className="text-slate-400 mt-1">{n.message}</div>
+                          <div className="text-[10px] text-slate-500 mt-2">{new Date(n.timestamp).toLocaleString('ar-IQ')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Favorites Button */}
           <button

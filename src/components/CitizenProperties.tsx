@@ -442,7 +442,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 >
                   {/* Image Container */}
                   <div className="relative h-44 w-full overflow-hidden rounded-xl bg-slate-900">
-                    <img 
+                    <img loading="lazy" 
                       src={prop.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80'} 
                       alt={prop.title}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -651,7 +651,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 <label className="block text-xs text-slate-400">صورة الحساب / الشعار (Avatar)</label>
                 <div className="flex items-center gap-4 bg-slate-900 p-3 rounded-xl border border-white/5">
                   <div className="h-12 w-12 rounded-lg overflow-hidden bg-slate-800">
-                    <img src={profileAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'} alt="Avatar" className="h-full w-full object-cover" />
+                    <img loading="lazy" src={profileAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'} alt="Avatar" className="h-full w-full object-cover" />
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleAvatarChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
@@ -665,7 +665,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                 <label className="block text-xs text-slate-400">صورة غلاف صفحتك الشخصية</label>
                 <div className="flex items-center gap-4 bg-slate-900 p-3 rounded-xl border border-white/5">
                   <div className="h-12 w-16 rounded-lg overflow-hidden bg-slate-800">
-                    <img src={profileCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80'} alt="Cover" className="h-full w-full object-cover" />
+                    <img loading="lazy" src={profileCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80'} alt="Cover" className="h-full w-full object-cover" />
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleCoverChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
@@ -697,14 +697,14 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
             <div className="rounded-2xl border border-white/10 bg-slate-900 overflow-hidden shadow-2xl relative">
               {/* Cover */}
               <div className="h-24 bg-slate-800 relative">
-                <img src={profileCover} alt="Cover" className="h-full w-full object-cover opacity-60" />
+                <img loading="lazy" src={profileCover} alt="Cover" className="h-full w-full object-cover opacity-60" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent"></div>
               </div>
 
               {/* Identity overlapping */}
               <div className="p-4 pt-0 -mt-8 relative text-center">
                 <div className="h-16 w-16 rounded-xl border-2 border-slate-900 bg-slate-950 overflow-hidden mx-auto shadow-xl">
-                  <img src={profileAvatar} alt="Avatar" className="h-full w-full object-cover" />
+                  <img loading="lazy" src={profileAvatar} alt="Avatar" className="h-full w-full object-cover" />
                 </div>
 
                 <div className="mt-2.5">
@@ -925,7 +925,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   <div className="grid grid-cols-4 gap-2 mb-3">
                     {editImages?.map((img, i) => (
                       <div key={i} className="relative h-16 rounded-lg bg-slate-900 border border-white/5 overflow-hidden group">
-                        <img src={img} alt="Property" className="h-full w-full object-cover" />
+                        <img loading="lazy" src={img} alt="Property" className="h-full w-full object-cover" />
                         <button
                           type="button"
                           onClick={() => handleRemoveEditImage(i)}

@@ -1,4 +1,4 @@
-import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, MarketIndicator, Supervisor, CitizenProfile } from '../types';
+import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, MarketIndicator, Supervisor, CitizenProfile, UserNotification } from '../types';
 
 const API_BASE = '/api';
 
@@ -15,6 +15,12 @@ export async function loginAdmin(username: string, password: string) {
 function getAuthHeaders(): HeadersInit {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   try {
+    const token = localStorage.getItem('aden_token') || localStorage.getItem('aden-admin-token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Legacy support
     const user = localStorage.getItem('aden-user');
     if (user && user !== 'undefined') {
       const parsed = JSON.parse(user);
@@ -33,6 +39,12 @@ function getAuthHeaders(): HeadersInit {
 function getAuthHeadersGET(): HeadersInit {
   const headers: Record<string, string> = {};
   try {
+    const token = localStorage.getItem('aden_token') || localStorage.getItem('aden-admin-token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Legacy support
     const user = localStorage.getItem('aden-user');
     if (user && user !== 'undefined') {
       const parsed = JSON.parse(user);
@@ -87,8 +99,8 @@ export async function updateProperty(id: string, property: Partial<Property>): P
   return res.json();
 }
 
-export async function deleteProperty(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/properties/${id}`, {
+export async function deleteProperty(id: string, hard = false): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/properties/${id}${hard ? '?hard=true' : ''}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
   });
@@ -404,7 +416,7 @@ export async function incrementPhoneViews(id: string): Promise<void> {
 
 
 export const fetchAgreements = async (): Promise<any[]> => {
-  const res = await fetch('/api/agreements');
+  const res = await fetch('/api/agreements', { headers: getAuthHeadersGET() });
   if (!res.ok) throw new Error('Failed to fetch agreements');
   return res.json();
 };
@@ -412,7 +424,7 @@ export const fetchAgreements = async (): Promise<any[]> => {
 export const updateAgreementStatus = async (id: string, status: string): Promise<any> => {
   const res = await fetch('/api/agreements/' + id, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ status })
   });
   if (!res.ok) throw new Error('Failed to update agreement');
@@ -420,7 +432,7 @@ export const updateAgreementStatus = async (id: string, status: string): Promise
 };
 
 export const fetchServiceProviders = async (): Promise<any[]> => {
-  const res = await fetch('/api/service-providers');
+  const res = await fetch('/api/service-providers', { headers: getAuthHeadersGET() });
   return res.json();
 };
 export const addServiceProvider = async (provider: any): Promise<any> => {
@@ -448,13 +460,13 @@ export const deleteServiceProvider = async (id: string): Promise<any> => {
 };
 
 export const fetchProviderApplications = async (): Promise<any[]> => {
-  const res = await fetch('/api/provider-applications');
+  const res = await fetch('/api/provider-applications', { headers: getAuthHeadersGET() });
   return res.json();
 };
 export const submitProviderApplication = async (app: any): Promise<any> => {
   const res = await fetch('/api/provider-applications', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(app)
   });
   return res.json();
@@ -496,3 +508,30 @@ export async function deleteGisItem(collection: string, id: string) {
   });
   return res.json();
 }
+
+export async function fetchNotifications(): Promise<UserNotification[]> {
+  const res = await fetch(`${API_BASE}/notifications`, { headers: getAuthHeadersGET() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await fetch(`${API_BASE}/notifications/${id}/read`, {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  });
+}
+
+export const fetchReviews = async (propertyId: string): Promise<any[]> => {
+  const res = await fetch('/api/reviews/' + propertyId, { headers: getAuthHeadersGET() });
+  return res.json();
+};
+
+export const submitReview = async (review: any): Promise<any> => {
+  const res = await fetch('/api/reviews', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(review)
+  });
+  return res.json();
+};

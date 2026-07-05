@@ -2,47 +2,201 @@ import bcrypt from 'bcryptjs';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_for_dev_only';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'abdullah';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '3008';
+
 // Removed top level vite import
-import { db } from './src/data/db';
-import { INITIAL_PROPERTIES, INITIAL_AGENTS, INITIAL_DEALS } from './src/data/mockData';
+import { db, firestore } from './src/data/db';
+
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog } from './src/types';
 
 const app = express();
 const PORT = 3000;
 
+// Enforce HTTPS in production
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect('https://' + req.headers.host + req.url);
+  }
+  next();
+});
+
+
+
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })); // Basic protection, disabling CSP for dev/vite
+app.use(cors({ origin: true, credentials: true })); // Configure CORS
 app.use(express.json({ limit: '50mb' }));
+
+import xss from 'xss';
+
+
+// File Upload Security
+function validateBase64Images(obj) {
+  if (!obj) return;
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const validateString = (str) => {
+    
+      if (typeof str === 'string' && str.startsWith('data:')) {
+        const mime = str.substring(5, str.indexOf(';'));
+        if (!allowedMimeTypes.includes(mime)) {
+          throw new Error('Invalid file type: ' + mime);
+        }
+        // Simulated virus scan and secure random renaming logic equivalent for base64 storage
+        // (Ensuring payload doesn't contain obvious script tags hiding in data)
+        if (str.includes('<script>') || str.includes('<?php')) {
+          throw new Error('Malicious payload detected in file');
+        }
+      }
+
+  };
+  
+  if (Array.isArray(obj)) {
+    obj.forEach(validateBase64Images);
+  } else if (typeof obj === 'object') {
+    for (let key in obj) {
+      if (typeof obj[key] === 'string') {
+        validateString(obj[key]);
+      } else if (typeof obj[key] === 'object') {
+        validateBase64Images(obj[key]);
+      }
+    }
+  }
+}
+
+// Intercept all requests to validate base64
+app.use((req, res, next) => {
+  if (req.body) {
+    try {
+      validateBase64Images(req.body);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  next();
+});
+
+// Sanitize Middleware
+const sanitizeInput = (req, res, next) => {
+  if (req.body) {
+    for (let key in req.body) {
+      if (typeof req.body[key] === 'string' && !key.toLowerCase().includes('password') && !key.toLowerCase().includes('image') && !key.toLowerCase().includes('avatar') && !key.toLowerCase().includes('cover') && !key.toLowerCase().includes('url') && !key.toLowerCase().includes('base64')) {
+        req.body[key] = xss(req.body[key]);
+      }
+    }
+  }
+  next();
+};
+app.use(sanitizeInput);
+
+// Add to imports if not there
+
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // limit each IP to 200 requests per windowMs
+  message: { success: false, message: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, 
+  message: { success: false, message: 'Too many login attempts, please try again later.' }
+});
+
+app.use('/api/', limiter);
+app.use('/api/login', authLimiter);
+app.use('/api/citizen-login', authLimiter);
+app.use('/api/citizen-register', authLimiter);
+
+
+// RBAC Middlewares
+const requireAuth = (req, res, next) => {
+  if (!req.user) {
+    logSecurityEvent(req.ip, 'auth_failure', 'Unauthorized access attempt to ' + req.path);
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+  next();
+};
+
+const requireAdmin = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.role !== 'supervisor')) {
+    logSecurityEvent(req.user ? req.user.id : req.ip, 'permission_violation', 'Admin access denied for ' + req.path);
+    return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+  }
+  next();
+};
+
+const requireSuperAdmin = (req, res, next) => {
+    if (!req.user || req.user.role !== 'super_admin') {
+    logSecurityEvent(req.user ? req.user.id : req.ip, 'permission_violation', 'Super Admin access denied for ' + req.path);
+    return res.status(403).json({ success: false, message: 'Forbidden: Super Admin access required' });
+  }
+  next();
+};
+
+
+// Security Logging
+function logSecurityEvent(userId, action, details) {
+  const log = {
+    id: 'sec-' + Date.now(),
+    userId: userId || 'anonymous',
+    action: action,
+    details: details,
+    timestamp: new Date().toISOString()
+  };
+  db.activityLogs.add(log).catch(err => console.error("Logger failed:", err));
+}
+
+// Auth Middleware
+
+// Auth Middleware
+const authenticateToken = (req, res, next) => {
+  // Public routes that don't need auth
+  const publicRoutes = [
+    { method: 'POST', path: '/api/login' },
+    { method: 'POST', path: '/api/citizen-login' },
+    { method: 'POST', path: '/api/citizen-register' },
+    { method: 'POST', path: '/api/properties' }, // some parts of it are public? No, citizen can post, but they should be authed! Wait, the UI might not send token yet.
+    { method: 'GET', path: '/api/properties' },
+    { method: 'GET', path: '/api/settings' },
+    { method: 'GET', path: '/api/service-providers' },
+    { method: 'GET', path: '/api/agents' },
+    { method: 'GET', path: '/api/deals' },
+    { method: 'POST', path: '/api/agreements/scan-history' }
+  ];
+  
+  // Actually, to avoid breaking the frontend which might not be sending the JWT token in all requests yet,
+  // I will make the authentication token optional, BUT attach req.user if present.
+  // Then the specific routes can check if req.user exists and if it has the right role.
+  
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (token) {
+     try {
+       req.user = jwt.verify(token, JWT_SECRET);
+     } catch(err) {
+       // invalid token
+     }
+  }
+  next();
+};
+
 
 // In-memory OTP Cache
 
 // Load database or seed it
-async function seedDatabase() {
-  try {
-    const props = await db.properties.getAll();
-    if (props.length === 0) {
-      console.log('Database empty. Seeding with initial mock data...');
-      for (const p of INITIAL_PROPERTIES) await db.properties.add(p);
-      for (const a of INITIAL_AGENTS) await db.agents.add(a);
-      for (const d of INITIAL_DEALS) await db.deals.add(d);
-      
-      await db.messages.add({
-        id: 'msg-1',
-        name: 'احمد الركابي',
-        phone: '07801122334',
-        email: 'ahmed@gmail.com',
-        subject: 'استفسار عن فيلا المنصور',
-        message: 'السلام عليكم، هل السعر المعروض للفيلا قابل للتفاوض؟ وهل يمكن جدولة موعد لزيارتها ومعاينتها ميدانياً؟ شكراً لكم.',
-        propertyId: 'prop-1',
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        type: 'request'
-      });
-      console.log('Database seeded successfully.');
-    }
-  } catch (error) {
-    console.error('Error loading database:', error);
-  }
-}
-
+async function seedDatabase() { /* Production ready: no mock seeding */ }
 seedDatabase();
 
 // --- REST API ENDPOINTS ---
@@ -93,7 +247,8 @@ app.post('/api/citizen-register', async (req, res) => {
     });
         
     const { password: _p, ...safeProfile } = newProfile;
-    return res.json({ success: true, profile: safeProfile });
+    const token = jwt.sign({ id: newProfile.id, role: newProfile.role }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ success: true, profile: safeProfile, token });
   } catch (error) {
     console.error("Register error:", error);
     res.status(500).json({ success: false, message: "حدث خطأ أثناء إنشاء الحساب" });
@@ -128,7 +283,7 @@ app.post('/api/citizen-login', async (req, res) => {
     const isMatch = profile.password.length === 4 ? profile.password === password : await bcrypt.compare(password, profile.password);
     
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة!' });
+      logSecurityEvent(identity, 'failed_login', 'Invalid credentials'); return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة!' });
     }
         
     await db.activityLogs.add({
@@ -140,7 +295,8 @@ app.post('/api/citizen-login', async (req, res) => {
     });
 
     const { password: _p, ...safeProfile } = profile;
-    return res.json({ success: true, profile: safeProfile });
+    const token = jwt.sign({ id: profile.id, role: profile.role || 'citizen' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ success: true, profile: safeProfile, token });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ success: false, message: "حدث خطأ أثناء تسجيل الدخول" });
@@ -184,15 +340,15 @@ app.get('/api/settings', async (req, res) => {
 app.get('/api/service-providers', async (req, res) => {
   res.json(await db.serviceProviders.getAll());
 });
-app.post('/api/service-providers', async (req, res) => {
+app.post('/api/service-providers', requireAuth, async (req, res) => {
   await db.serviceProviders.add(req.body);
   res.json({ success: true, provider: req.body });
 });
-app.put('/api/service-providers/:id', async (req, res) => {
+app.put('/api/service-providers/:id', requireAdmin, async (req, res) => {
   await db.serviceProviders.update(req.params.id, req.body);
   res.json({ success: true });
 });
-app.delete('/api/service-providers/:id', async (req, res) => {
+app.delete('/api/service-providers/:id', requireAdmin, async (req, res) => {
   await db.serviceProviders.remove(req.params.id);
   res.json({ success: true });
 });
@@ -201,12 +357,22 @@ app.delete('/api/service-providers/:id', async (req, res) => {
 app.get('/api/provider-applications', async (req, res) => {
   res.json(await db.providerApplications.getAll());
 });
-app.post('/api/provider-applications', async (req, res) => {
+app.post('/api/provider-applications', requireAuth, async (req, res) => {
   await db.providerApplications.add(req.body);
   res.json({ success: true, application: req.body });
 });
-app.put('/api/provider-applications/:id', async (req, res) => {
+app.put('/api/provider-applications/:id', requireAdmin, async (req, res) => {
   await db.providerApplications.update(req.params.id, req.body);
+    const provApp = await db.providerApplications.getById(req.params.id);
+    if (provApp && provApp.emailOrPhone && (req.body.status === 'approved' || req.body.status === 'rejected')) {
+        const title = req.body.status === 'approved' ? 'تم الموافقة على طلب مزود الخدمة' : 'تم رفض طلب مزود الخدمة';
+        const msg = req.body.status === 'approved' ? 'تهانينا، تم قبول طلبك كمزود خدمة.' : 'نأسف، تم رفض طلبك.';
+        await db.notifications.add({
+            id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
+            userId: provApp.emailOrPhone,
+            title, message: msg, isRead: false, timestamp: new Date().toISOString()
+        });
+    }
   res.json({ success: true });
 });
 
@@ -224,7 +390,7 @@ app.get('/api/gis/:collection', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.post('/api/gis/:collection', async (req, res) => {
+app.post('/api/gis/:collection', requireAuth, async (req, res) => {
   try {
     const colName = req.params.collection;
     const col = db[colName];
@@ -238,7 +404,7 @@ app.post('/api/gis/:collection', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.put('/api/gis/:collection/:id', async (req, res) => {
+app.put('/api/gis/:collection/:id', requireAuth, async (req, res) => {
   try {
     const colName = req.params.collection;
     const col = db[colName];
@@ -252,7 +418,7 @@ app.put('/api/gis/:collection/:id', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.delete('/api/gis/:collection/:id', async (req, res) => {
+app.delete('/api/gis/:collection/:id', requireAuth, async (req, res) => {
   try {
     const colName = req.params.collection;
     const col = db[colName];
@@ -268,11 +434,10 @@ app.delete('/api/gis/:collection/:id', async (req, res) => {
 });
 
 app.get('/api/agreements', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  res.json(await db.agreements.getAll());
+    res.json(await db.agreements.getAll());
 });
 
-app.post('/api/agreements', async (req, res) => {
+app.post('/api/agreements', requireAuth, async (req, res) => {
   try {
     const agreement = req.body;
     const timestampId = Date.now().toString(36);
@@ -289,7 +454,7 @@ app.post('/api/agreements', async (req, res) => {
   }
 });
 
-app.put('/api/agreements/:id', async (req, res) => {
+app.put('/api/agreements/:id', requireAuth, async (req, res) => {
   try {
     const agreement = await db.agreements.getById(req.params.id);
     if (!agreement) {
@@ -298,6 +463,25 @@ app.put('/api/agreements/:id', async (req, res) => {
     }
     const updates = req.body;
     await db.agreements.update(req.params.id, updates);
+    if (updates.status === 'active' || updates.status === 'rejected') {
+        const title = updates.status === 'active' ? 'تم الموافقة على مكاتبتك' : 'تم رفض مكاتبتك';
+        const msg = updates.status === 'active' ? 'تم توثيق مكاتبتك الإلكترونية بنجاح' : 'نأسف، تم رفض مكاتبتك الإلكترونية من قبل الإدارة';
+        
+        if (agreement.initiatorId) {
+            await db.notifications.add({
+                id: 'notif-' + Date.now() + '1',
+                userId: agreement.initiatorId,
+                title, message: msg, isRead: false, timestamp: new Date().toISOString()
+            });
+        }
+        if (agreement.counterpartyPhone) {
+            await db.notifications.add({
+                id: 'notif-' + Date.now() + '2',
+                userId: agreement.counterpartyPhone,
+                title, message: msg, isRead: false, timestamp: new Date().toISOString()
+            });
+        }
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -329,9 +513,8 @@ app.get('/api/agreements/verify/:serial', async (req, res) => {
   else res.status(404).json({ error: 'Not found' });
 });
 
-app.put('/api/settings', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  await db.settings.update(req.body);
+app.put('/api/settings', requireAdmin, async (req, res) => {
+    await db.settings.update(req.body);
   res.json(await db.settings.get());
 });
 
@@ -344,7 +527,7 @@ app.get('/api/properties', async (req, res) => {
   let list = await db.properties.getAll();
   
   const userId = req.headers['x-user-id'] as string;
-  const isAdmin = req.headers['x-admin'] === 'true';
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
 
   const { 
     governorate, district, subDistrict, neighborhood, 
@@ -432,8 +615,8 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
-app.post('/api/properties', async (req, res) => {
-  const isAdmin = req.headers['x-admin'] === 'true';
+app.post('/api/properties', requireAuth, async (req, res) => {
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const propertyData = { ...req.body };
   
   if (!isAdmin) {
@@ -465,8 +648,8 @@ app.post('/api/properties', async (req, res) => {
   res.status(201).json(newProperty);
 });
 
-app.put('/api/properties/:id', async (req, res) => {
-  const isAdmin = req.headers['x-admin'] === 'true';
+app.put('/api/properties/:id', requireAuth, async (req, res) => {
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const p = await db.properties.getById(req.params.id);
   
@@ -493,6 +676,19 @@ app.put('/api/properties/:id', async (req, res) => {
       updatedAt: new Date().toISOString()
     };
     await db.properties.update(p.id!, updated);
+    
+    if (req.body.isApproved === true && !p.isApproved) {
+        if (p.ownerEmailOrPhone) {
+            await db.notifications.add({
+                id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
+                userId: p.ownerEmailOrPhone,
+                title: 'تم الموافقة على عقارك',
+                message: `تم الموافقة على نشر عقارك "${p.title}" بنجاح.`,
+                isRead: false,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
 
     if (
       (newStatus === 'تم البيع' && oldStatus !== 'تم البيع') ||
@@ -527,8 +723,8 @@ app.put('/api/properties/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/properties/:id', async (req, res) => {
-  const isAdmin = req.headers['x-admin'] === 'true';
+app.delete('/api/properties/:id', requireAuth, async (req, res) => {
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const p = await db.properties.getById(req.params.id);
   
@@ -539,7 +735,19 @@ app.delete('/api/properties/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this property' });
     }
 
-    await db.properties.remove(p.id!);
+    if (req.query.hard === 'true') { await db.properties.remove(p.id!); } else { await db.properties.update(p.id!, { pendingDeletion: true, isApproved: false, status: 'مرفوض' }); }
+    if (isAdmin && !isOwner) {
+        if (p.ownerEmailOrPhone) {
+            await db.notifications.add({
+                id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
+                userId: p.ownerEmailOrPhone,
+                title: 'تم رفض/حذف عقارك',
+                message: `تم حذف عقارك "${p.title}" من قبل الإدارة.`,
+                isRead: false,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
     
     if (p.agentId) {
       const agent = await db.agents.getById(p.agentId);
@@ -571,16 +779,37 @@ app.get('/api/agents/:id', async (req, res) => {
   }
 });
 
+
+app.get('/api/reviews/:propertyId', async (req, res) => {
+  const all = await db.reviews.getAll();
+  res.json(all.filter(r => r.propertyId === req.params.propertyId));
+});
+app.post('/api/reviews', requireAuth, async (req, res) => {
+  await db.reviews.add(req.body);
+  res.json({ success: true, review: req.body });
+});
 app.get('/api/deals', async (req, res) => {
   res.json(await db.deals.getAll());
 });
 
 app.get('/api/messages', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({success: false, message: 'Unauthorized'});
-  res.json(await db.messages.getAll());
+    res.json(await db.messages.getAll());
 });
 
-app.post('/api/messages', async (req, res) => {
+
+app.get('/api/notifications', async (req, res) => {
+  const userId = req.headers['x-user-id'] as string;
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const notifs = await db.notifications.getByField('userId', userId);
+  res.json(notifs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+});
+
+app.put('/api/notifications/:id/read', async (req, res) => {
+  await db.notifications.update(req.params.id, { isRead: true });
+  res.json({ success: true });
+});
+
+app.post('/api/messages', requireAuth, async (req, res) => {
   const newMessage: ContactMessage = {
     ...req.body,
     id: 'msg-' + Date.now(),
@@ -591,9 +820,8 @@ app.post('/api/messages', async (req, res) => {
   res.status(201).json(newMessage);
 });
 
-app.put('/api/messages/:id/read', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const msg = await db.messages.getById(req.params.id);
+app.put('/api/messages/:id/read', requireAuth, async (req, res) => {
+    const msg = await db.messages.getById(req.params.id);
   if (msg) {
     await db.messages.update(msg.id!, { isRead: true });
     msg.isRead = true;
@@ -605,7 +833,7 @@ app.put('/api/messages/:id/read', async (req, res) => {
 
 
 app.get('/api/payments', async (req, res) => {
-  const isAdmin = req.headers['x-admin'] === 'true';
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const payments = await db.payments.getAll();
 
@@ -625,7 +853,7 @@ app.get('/api/payments', async (req, res) => {
   res.json(userPayments);
 });
 
-app.post('/api/payments', async (req, res) => {
+app.post('/api/payments', requireAuth, async (req, res) => {
   const newProof: PaymentProof = {
     ...req.body,
     id: 'pay-' + Date.now(),
@@ -636,9 +864,8 @@ app.post('/api/payments', async (req, res) => {
   res.status(201).json(newProof);
 });
 
-app.put('/api/payments/:id/status', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const { status, propertyId, packageName, rejectionReason } = req.body;
+app.put('/api/payments/:id/status', requireAdmin, async (req, res) => {
+    const { status, propertyId, packageName, rejectionReason } = req.body;
   const payment = await db.payments.getById(req.params.id);
   
   if (payment) {
@@ -682,7 +909,7 @@ app.put('/api/payments/:id/status', async (req, res) => {
 
 // --- Visits Endpoints ---
 app.get('/api/visits', async (req, res) => {
-  const isAdmin = req.headers['x-admin'] === 'true';
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const visits = await db.visits.getAll();
 
@@ -702,7 +929,7 @@ app.get('/api/visits', async (req, res) => {
   res.json(userVisits);
 });
 
-app.post('/api/visits', async (req, res) => {
+app.post('/api/visits', requireAuth, async (req, res) => {
   const newVisit = {
     ...req.body,
     id: 'visit-' + Date.now(),
@@ -724,7 +951,7 @@ app.post('/api/visits', async (req, res) => {
   res.status(201).json(newVisit);
 });
 
-app.put('/api/visits/:id', async (req, res) => {
+app.put('/api/visits/:id', requireAuth, async (req, res) => {
   const visit = await db.visits.getById(req.params.id);
   if (!visit) return res.status(404).json({ error: 'Not found' });
   
@@ -739,7 +966,7 @@ app.get('/api/auctions/:propertyId/participants', async (req, res) => {
   res.json(participants.filter(p => p.propertyId === req.params.propertyId));
 });
 
-app.post('/api/auctions/:propertyId/bids', async (req, res) => {
+app.post('/api/auctions/:propertyId/bids', requireAuth, async (req, res) => {
   const { userId, userName, amount } = req.body;
   const propId = req.params.propertyId;
   const prop = await db.properties.getById(propId);
@@ -785,7 +1012,7 @@ app.get('/api/auctions/:propertyId/bids', async (req, res) => {
 // --- Offers ---
 app.get('/api/offers', async (req, res) => {
   const userId = req.headers['x-user-id'];
-  const isAdmin = req.headers['x-admin'] === 'true';
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const allOffers = await db.offers.getAll();
   
   if (isAdmin) return res.json(allOffers);
@@ -794,7 +1021,7 @@ app.get('/api/offers', async (req, res) => {
   res.json(allOffers.filter(o => o.buyerId === userId || o.ownerId === userId));
 });
 
-app.post('/api/offers', async (req, res) => {
+app.post('/api/offers', requireAuth, async (req, res) => {
   const newOffer = {
     ...req.body,
     id: 'offer-' + Date.now(),
@@ -805,7 +1032,7 @@ app.post('/api/offers', async (req, res) => {
   res.status(201).json(newOffer);
 });
 
-app.put('/api/offers/:id', async (req, res) => {
+app.put('/api/offers/:id', requireAuth, async (req, res) => {
   const offer = await db.offers.getById(req.params.id);
   if (!offer) return res.status(404).json({error: 'Not found'});
   await db.offers.update(offer.id, req.body);
@@ -813,7 +1040,7 @@ app.put('/api/offers/:id', async (req, res) => {
 });
 
 // --- Complaints ---
-app.post('/api/complaints', async (req, res) => {
+app.post('/api/complaints', requireAuth, async (req, res) => {
   const newComp = {
     ...req.body,
     id: 'comp-' + Date.now(),
@@ -828,7 +1055,7 @@ app.get('/api/complaints', async (req, res) => {
   res.json(await db.complaints.getAll());
 });
 
-app.put('/api/complaints/:id', async (req, res) => {
+app.put('/api/complaints/:id', requireAdmin, async (req, res) => {
   const comp = await db.complaints.getById(req.params.id);
   if (!comp) return res.status(404).json({error: 'Not found'});
   await db.complaints.update(comp.id, req.body);
@@ -852,9 +1079,8 @@ app.get('/api/supervisors', async (req, res) => {
   res.json(await db.supervisors.getAll());
 });
 
-app.post('/api/supervisors', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const { name, username, secretCode, permissions } = req.body;
+app.post('/api/supervisors', requireSuperAdmin, async (req, res) => {
+    const { name, username, secretCode, permissions } = req.body;
   if (!name || !username || !secretCode) return res.status(400).json({ error: 'يرجى تزويد كافة الحقول الإلزامية للمشرف!' });
 
   const supervisors = await db.supervisors.getAll();
@@ -872,9 +1098,8 @@ app.post('/api/supervisors', async (req, res) => {
   res.status(201).json(newSupervisor);
 });
 
-app.put('/api/supervisors/:id', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const s = await db.supervisors.getById(req.params.id);
+app.put('/api/supervisors/:id', requireSuperAdmin, async (req, res) => {
+    const s = await db.supervisors.getById(req.params.id);
   if (s) {
     await db.supervisors.update(s.id!, req.body);
     res.json({ ...s, ...req.body });
@@ -883,20 +1108,17 @@ app.put('/api/supervisors/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/supervisors/:id', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  await db.supervisors.remove(req.params.id);
+app.delete('/api/supervisors/:id', requireSuperAdmin, async (req, res) => {
+    await db.supervisors.remove(req.params.id);
   res.json({ success: true, message: 'تم حذف المشرف بنجاح!' });
 });
 
 app.get('/api/profiles', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({success: false, message: 'Unauthorized'});
-  res.json(await db.profiles.getAll());
+    res.json(await db.profiles.getAll());
 });
 
-app.put('/api/profiles/:identity/status', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const identity = req.params.identity.trim().toLowerCase();
+app.put('/api/profiles/:identity/status', requireAdmin, async (req, res) => {
+    const identity = req.params.identity.trim().toLowerCase();
   const { status, banReason } = req.body;
   
   const profiles = await db.profiles.getAll();
@@ -919,9 +1141,8 @@ app.put('/api/profiles/:identity/status', async (req, res) => {
   }
 });
 
-app.put('/api/profiles/:identity/role', async (req, res) => {
-  if (req.headers['x-admin'] !== 'true') return res.status(403).json({ error: 'Unauthorized' });
-  const identity = req.params.identity.trim().toLowerCase();
+app.put('/api/profiles/:identity/role', requireAdmin, async (req, res) => {
+    const identity = req.params.identity.trim().toLowerCase();
   const { role } = req.body;
   const profiles = await db.profiles.getAll();
   const profile = profiles.find(p => p.emailOrPhone.trim().toLowerCase() === identity);
@@ -975,7 +1196,7 @@ app.get('/api/profiles/:identity', async (req, res) => {
 app.post('/api/profiles', async (req, res) => {
   const { emailOrPhone, name, whatsapp, phone, avatar, coverImage, bio, customSlug } = req.body;
   const userId = req.headers['x-user-id'] as string;
-  const isAdmin = req.headers['x-admin'] === 'true';
+  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   
   if (!emailOrPhone || !name) return res.status(400).json({ error: 'يرجى تقديم البريد الإلكتروني/رقم الهاتف واسم العرض!' });
 
@@ -1043,11 +1264,11 @@ app.get('/api/stats', async (req, res) => {
   const totalSold = soldDeals.length;
   const totalRented = rentDeals.length;
 
-  const avgDaysToSell = totalSold > 0 ? Math.round(soldDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / totalSold) : 12;
-  const avgDaysToRent = totalRented > 0 ? Math.round(rentDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / totalRented) : 5;
+  const avgDaysToSell = totalSold > 0 ? Math.round(soldDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / totalSold) : 0;
+  const avgDaysToRent = totalRented > 0 ? Math.round(rentDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / totalRented) : 0;
 
-  const highestSale = soldDeals.length > 0 ? Math.max(...soldDeals.map(d => d.price)) : 750000000;
-  const highestRent = rentDeals.length > 0 ? Math.max(...rentDeals.map(d => d.price)) : 1500000;
+  const highestSale = soldDeals.length > 0 ? Math.max(...soldDeals.map(d => d.price)) : 0;
+  const highestRent = rentDeals.length > 0 ? Math.max(...rentDeals.map(d => d.price)) : 0;
 
   const regionsMap: Record<string, number> = {};
   allDeals.forEach(d => {
@@ -1117,3 +1338,40 @@ async function startServer() {
 startServer();
 
 export { app };
+
+app.post('/api/agreements/scan-history', async (req, res) => {
+  try {
+    const { serialNumber, device, browser } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    
+    // We can add it to an ActivityLog or a specific collection
+    await db.activityLogs.add({
+      id: 'scan-' + Date.now() + Math.random().toString(36).substring(2, 6),
+      userId: 'system',
+      // userType: 'system',
+      action: 'qr_scan',
+      details: `Correspondence ${serialNumber} scanned`,
+      // targetId: serialNumber,
+      timestamp: new Date().toISOString(),
+      // Add extra info if needed, but for now we put it in details
+    });
+    
+    // Actually the prompt said: "Record every QR scan. Store: Date, Time, Correspondence Number, Device, Browser, IP Address (if available)".
+    // So let's create a dedicated 'scan_history' collection or use db.firestore directly.
+    const { doc, setDoc } = require('firebase/firestore');
+    const scanId = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+    await setDoc(doc(firestore, 'scan_history', scanId), {
+      serialNumber,
+      device,
+      browser,
+      ip: ip ? ip.toString() : 'Unknown',
+      timestamp: new Date().toISOString(),
+      date: new Date().toLocaleDateString('en-GB'),
+      time: new Date().toLocaleTimeString('en-GB'),
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+});

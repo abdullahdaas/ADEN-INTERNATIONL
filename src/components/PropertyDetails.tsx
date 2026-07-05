@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { Property, Agent, Review } from '../types';
 import { formatPrice } from './PropertyCard';
-import { INITIAL_AGENTS } from '../data/mockData';
-import { sendMessage, submitPaymentProof } from '../utils/api';
+
+import { sendMessage, submitPaymentProof, fetchReviews, submitReview } from '../utils/api';
 import { MapDisplay } from './MapDisplay';
 import { calculateDistance } from '../utils/distance';
 
@@ -91,17 +91,13 @@ export default function PropertyDetails({
       window.alert('حدث خطأ أثناء حجز الموعد.');
     }
   };
-  const [reviews, setReviews] = useState<Review[]>([
-    {
-      id: 'rev-1',
-      agentId: property.agentId,
-      reviewerName: 'حسين الفتلاوي',
-      rating: 5,
-      comment: 'تعامل راقي جداً ومصداقية عالية في تبيان تفاصيل العقار ومساحته الحقيقية. أنصح بشدة بالتعامل مع مكتب عدن.',
-      createdAt: '2026-06-20T10:00:00Z',
-      isApproved: true
-    }
-  ]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  
+  useEffect(() => {
+    fetchReviews(property.id).then(data => {
+      setReviews(data);
+    }).catch(err => console.error('Failed to fetch reviews', err));
+  }, [property.id]);
 
   // Review Form state
   const [reviewerName, setReviewerName] = useState('');
@@ -117,9 +113,20 @@ export default function PropertyDetails({
   const [senderPhone, setSenderPhone] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const [proofImageFile, setProofImageFile] = useState<File | null>(null);
 
   // Agent retrieval
-  const agent = INITIAL_AGENTS.find(a => a.id === property.agentId) || INITIAL_AGENTS[0];
+  const agent = {
+    name: property.advertiserName || 'الإدارة',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80',
+    phone: property.advertiserPhone || '07810060292',
+    whatsapp: property.advertiserWhatsapp || property.advertiserPhone || '9647810060292',
+    telegram: undefined,
+    email: property.ownerEmailOrPhone || 'info@adenintl.site',
+    bio: 'المدير العام لشركة عدن للوساطة العقارية. خبرة ممتازة في السوق العقاري العراقي لمحافظات الأنبار وبغداد وأربيل.',
+    propertyCount: allProperties.filter(p => p.agentId === property.agentId).length || 1,
+    dealsCompleted: 0
+  };
 
   // Surroundings
   const nearbyProps = allProperties
@@ -169,7 +176,7 @@ export default function PropertyDetails({
         packageName: selectedPackage,
         amount,
         paymentMethod,
-        proofImage: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=80', // placeholder proof screenshot
+        proofImage: proofImageFile ? URL.createObjectURL(proofImageFile) : 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=80',
         senderName,
         senderPhone,
         transactionId
@@ -241,7 +248,7 @@ export default function PropertyDetails({
             
             {/* Primary Large Image */}
             <div className="relative h-96 w-full cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
-              <img
+              <img loading="lazy"
                 src={property.images[activeImageIdx] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&auto=format&fit=crop&q=80'}
                 alt={property.title}
                 referrerPolicy="no-referrer"
@@ -289,7 +296,7 @@ export default function PropertyDetails({
                       activeImageIdx === idx ? 'border-gold-prestige scale-95 shadow-md' : 'border-white/10 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="thumbnail" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                    <img loading="lazy" src={img} alt="thumbnail" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -339,7 +346,9 @@ export default function PropertyDetails({
                     ينتهي المزاد بتاريخ: {new Date(property.auctionEnd || '').toLocaleString('ar-IQ')}
                   </p>
                 </div>
-                <button onClick={() => window.alert('سيتم توفير خيار المشاركة في المزاد للمسجلين.')} className="px-6 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition-all shadow-lg shadow-amber-600/20">
+                <button onClick={() => {
+                  window.alert('سيتم توفير خيار المشاركة في المزاد قريباً.');
+                }} className="px-6 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition-all shadow-lg shadow-amber-600/20">
                   المشاركة في المزاد (50,000 د.ع)
                 </button>
               </div>
@@ -367,7 +376,7 @@ export default function PropertyDetails({
                 <h3 className="text-white font-bold text-sm mb-3 border-b border-white/5 pb-2">مستندات العقار</h3>
                 <div className="flex flex-wrap gap-2">
                   {property.documents?.filter(d => d.isPublic || user?.role === 'admin' || user?.emailOrPhone === property.ownerEmailOrPhone)?.map((doc, i) => (
-                    <a key={i} href={doc.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-slate-950 text-sm text-slate-300 hover:text-white hover:border-[#F27D26]/40 transition-all">
+                    <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-slate-950 text-sm text-slate-300 hover:text-white hover:border-[#F27D26]/40 transition-all">
                       📄 {doc.title}
                     </a>
                   ))}
@@ -580,7 +589,7 @@ export default function PropertyDetails({
                   <form onSubmit={handlePaymentSubmit} className="space-y-4">
                     <h4 className="text-sm font-bold text-slate-300">ثانياً: أرسل تفاصيل التحويل لإدارة المنصة ليتم تفعيل الترقية مباشرة:</h4>
                     
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-sm text-slate-400 mb-1">طريقة الدفع المستخدمة</label>
                         <select
@@ -614,6 +623,16 @@ export default function PropertyDetails({
                           value={senderPhone}
                           onChange={(e) => setSenderPhone(e.target.value)}
                           className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-600 outline-none"
+                        />
+                      </div>
+<div>
+                        <label className="block text-sm text-slate-400 mb-1">صورة إثبات الدفع (وصل التحويل)</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          required
+                          onChange={(e) => setProofImageFile(e.target.files?.[0] || null)}
+                          className="w-full rounded-lg border border-white/5 bg-slate-900 px-3 py-2 text-sm text-slate-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-[#F27D26]/20 file:text-[#F27D26] hover:file:bg-[#F27D26]/30 file:cursor-pointer"
                         />
                       </div>
                     </div>
@@ -787,7 +806,7 @@ export default function PropertyDetails({
             
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-gold-prestige shadow-lg shrink-0">
-                <img src={agent.avatar} alt={agent.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                <img loading="lazy" src={agent.avatar} alt={agent.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
               </div>
               <div>
                 <h4 className="text-sm font-extrabold text-white flex items-center gap-1.5">
@@ -830,8 +849,7 @@ export default function PropertyDetails({
               </a>
               <a
                 href={`https://wa.me/${agent.whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
+                target="_blank" rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-[#ffffff] transition-all shadow-lg"
               >
                 <MessageCircle className="h-4.5 w-4.5" />
@@ -840,8 +858,7 @@ export default function PropertyDetails({
               {agent.telegram && (
                 <a
                   href={`https://t.me/${agent.telegram}`}
-                  target="_blank"
-                  rel="noreferrer"
+                  target="_blank" rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 py-3 text-sm font-bold text-white transition-all"
                 >
                   <Send className="h-4 w-4" />
@@ -1062,8 +1079,7 @@ export default function PropertyDetails({
                 {property.advertiserWhatsapp && (
                   <a
                     href={`https://wa.me/${property.advertiserWhatsapp.replace(/[\s+]/g, '')}`}
-                    target="_blank"
-                    rel="noreferrer"
+                    target="_blank" rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-bold text-[#ffffff] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
                   >
                     <MessageCircle className="h-4.5 w-4.5" />
@@ -1091,7 +1107,7 @@ export default function PropertyDetails({
                     onClick={() => onSelectProperty(np.id)}
                     className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-white/5 hover:border-gold-prestige/30 transition-all text-right cursor-pointer"
                   >
-                    <img src={np.images?.[0]} alt={np.title} referrerPolicy="no-referrer" className="h-12 w-16 rounded object-cover" />
+                    <img loading="lazy" src={np.images?.[0]} alt={np.title} referrerPolicy="no-referrer" className="h-12 w-16 rounded object-cover" />
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <span className="text-sm font-bold text-white line-clamp-1">{np.title}</span>
@@ -1109,8 +1125,7 @@ export default function PropertyDetails({
 
             <a
               href={mapUrl}
-              target="_blank"
-              rel="noreferrer"
+              target="_blank" rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-gold-prestige/30 bg-gold-prestige/10 hover:bg-gold-prestige/20 py-2.5 text-sm font-bold text-gold-prestige transition-all text-center"
             >
               <Compass className="h-4 w-4" />
@@ -1129,7 +1144,7 @@ export default function PropertyDetails({
                     onClick={() => onSelectProperty(prop.id)}
                     className="flex gap-2.5 items-center p-2 rounded-xl bg-slate-950/40 border border-white/5 hover:border-gold-prestige/20 transition-all cursor-pointer group"
                   >
-                    <img 
+                    <img loading="lazy" 
                       src={prop.images?.[0]} 
                       alt={prop.title} 
                       referrerPolicy="no-referrer"
@@ -1168,7 +1183,7 @@ export default function PropertyDetails({
           </button>
 
           <div className="relative max-h-[85vh] w-full max-w-5xl overflow-hidden rounded-xl border border-white/10 bg-black">
-            <img 
+            <img loading="lazy" 
               src={property.images[activeImageIdx]} 
               alt="zoom" 
               referrerPolicy="no-referrer"

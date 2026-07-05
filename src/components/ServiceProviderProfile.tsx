@@ -57,7 +57,7 @@ export default function ServiceProviderProfile({
 
       {/* Cover and Header */}
       <div className="w-full h-64 md:h-80 relative bg-slate-900">
-        <img
+        <img loading="lazy"
           src={provider.coverImage}
           alt="Cover"
           className="w-full h-full object-cover opacity-80"
@@ -67,7 +67,7 @@ export default function ServiceProviderProfile({
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative -mt-20">
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-end">
-          <img
+          <img loading="lazy"
             src={provider.logo}
             alt={provider.name}
             className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-royal-dark object-cover bg-slate-800 shadow-2xl"
@@ -198,7 +198,7 @@ export default function ServiceProviderProfile({
                         key={idx}
                         className="h-40 rounded-xl overflow-hidden bg-slate-800 border border-white/5"
                       >
-                        <img
+                        <img loading="lazy"
                           src={img}
                           alt={`Portfolio ${idx}`}
                           className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 cursor-pointer"
@@ -296,8 +296,7 @@ export default function ServiceProviderProfile({
                   <Globe className="h-4 w-4 text-[#F27D26]" />
                   <a
                     href={provider.website}
-                    target="_blank"
-                    rel="noreferrer"
+                    target="_blank" rel="noopener noreferrer"
                     className="hover:text-blue-400 truncate"
                   >
                     {provider.website}

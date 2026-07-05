@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { ServiceProvider } from "../types";
-import { submitProviderApplication } from "../utils/api";
+import { submitProviderApplication, fetchServiceProviders } from "../utils/api";
 import { IRAQ_LOCATIONS } from "../data/iraqLocations";
 
 const MOCK_PROVIDERS: ServiceProvider[] = [
@@ -134,7 +134,23 @@ export default function ServiceProvidersList({
   lang,
   onSelectProvider,
 }: Props) {
-  const [providers, setProviders] = useState<ServiceProvider[]>(MOCK_PROVIDERS);
+  const [providers, setProviders] = useState<ServiceProvider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
+
+  useEffect(() => {
+    fetchServiceProviders().then(data => {
+      if (data && data.length > 0) {
+        setProviders(data);
+      } else {
+        setProviders(MOCK_PROVIDERS);
+      }
+      setLoadingProviders(false);
+    }).catch(err => {
+      console.error('Failed to fetch providers', err);
+      setProviders(MOCK_PROVIDERS);
+      setLoadingProviders(false);
+    });
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAppModal, setShowAppModal] = useState(false);
   const [appForm, setAppForm] = useState({ name: '', phone: '', category: '', governorate: '', details: '' });
@@ -239,7 +255,7 @@ export default function ServiceProvidersList({
               className="bg-slate-900/40 rounded-2xl border border-white/5 overflow-hidden hover:border-[#F27D26]/50 transition-all cursor-pointer group"
             >
               <div className="h-32 w-full relative">
-                <img
+                <img loading="lazy"
                   src={provider.coverImage}
                   alt="Cover"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -252,7 +268,7 @@ export default function ServiceProvidersList({
                 )}
               </div>
               <div className="px-5 pb-5 relative">
-                <img
+                <img loading="lazy"
                   src={provider.logo}
                   alt={provider.name}
                   className="w-16 h-16 rounded-xl border-4 border-royal-dark object-cover absolute -top-8 bg-slate-800"

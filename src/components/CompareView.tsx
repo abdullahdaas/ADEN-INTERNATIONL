@@ -49,15 +49,13 @@ export default function CompareView({
   };
 
   const handleWhatsapp = (property: Property) => {
-    const phone = property.agentId === 'ali_jassim' ? '9647701234567' : 
-                  property.agentId === 'zahra_salah' ? '9647809876543' : '9647810060292';
+    const phone = property.advertiserWhatsapp || property.advertiserPhone || '9647810060292';
     const msg = `السلام عليكم، أود الاستفسار عن العقار المقارن: "${property.title}" برمز: ${property.id}.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleCall = (property: Property) => {
-    const phone = property.agentId === 'ali_jassim' ? '07701234567' : 
-                  property.agentId === 'zahra_salah' ? '07809876543' : '07810060292';
+    const phone = property.advertiserPhone || '07810060292';
     window.open(`tel:${phone}`, '_self');
   };
 

@@ -73,7 +73,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
       <div className="relative rounded-3xl overflow-hidden border border-white/10 bg-slate-950 shadow-xl">
         {/* Cover Photo */}
         <div className="h-48 sm:h-64 w-full relative">
-          <img 
+          <img loading="lazy" 
             src={displayCover} 
             alt="Cover" 
             className="h-full w-full object-cover opacity-60"
@@ -87,7 +87,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
           <div className="flex flex-col md:flex-row items-center md:items-end gap-5 text-center md:text-right">
             {/* Avatar */}
             <div className="h-28 w-28 sm:h-36 sm:w-36 rounded-2xl overflow-hidden border-4 border-[#070707] bg-slate-900 shadow-2xl relative">
-              <img 
+              <img loading="lazy" 
                 src={displayAvatar} 
                 alt={displayName} 
                 className="h-full w-full object-cover"
@@ -126,8 +126,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
             {displayWhatsapp && (
               <a
                 href={`https://wa.me/${displayWhatsapp.replace(/[^0-9]/g, '')}`}
-                target="_blank"
-                rel="noreferrer"
+                target="_blank" rel="noopener noreferrer"
                 className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-[#ffffff] flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/10"
               >
                 <MessageSquare className="h-4 w-4" />

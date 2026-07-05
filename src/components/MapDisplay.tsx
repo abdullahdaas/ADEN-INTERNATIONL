@@ -69,8 +69,7 @@ export function MapDisplay({ property }: { property: Property }) {
           <div className="flex justify-end">
             <a 
               href={googleMapsUrl || `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
+              target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#F27D26] hover:text-[#ff8a3d] transition-colors text-xs font-bold"
             >
               <ExternalLink className="h-4 w-4" />

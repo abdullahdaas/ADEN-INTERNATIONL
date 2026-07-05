@@ -63,6 +63,7 @@ class SettingsManager {
 }
 
 export const db = {
+  reviews: new FirestoreCollection<any>('reviews'),
   properties: new FirestoreCollection<Property>('properties'),
   agents: new FirestoreCollection<Agent>('agents'),
   deals: new FirestoreCollection<CompletedDeal>('deals'),

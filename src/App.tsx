@@ -57,6 +57,7 @@ import { IRAQ_LOCATIONS } from "./data/iraqLocations";
 import { translations } from "./utils/translations";
 
 export default function App() {
+  const [verifySerialNumber, setVerifySerialNumber] = useState("");
   const [currentView, setView] = useState<
     | "home"
     | "listings"
@@ -281,14 +282,21 @@ export default function App() {
     }
 
     // 6. Check for electronic agreement URL
+    
     const path = window.location.pathname;
     if (path.startsWith("/letter/")) {
       const parts = path.split("/");
       if (parts.length >= 3 && parts[2]) {
         setSelectedAgreementId(parts[2]);
         setView("electronic-agreement-view");
-        
-        // Rewrite URL back to root for clean SPA feel, or keep it. We can leave it.
+      }
+    }
+    
+    if (path.startsWith("/verify/")) {
+      const parts = path.split("/");
+      if (parts.length >= 3 && parts[2]) {
+        setVerifySerialNumber(parts[2]);
+        setView("verify-agreement");
       }
     }
   }, []);
@@ -440,6 +448,7 @@ export default function App() {
         if (data.success) {
           setUser(data.profile);
           localStorage.setItem("aden-user", JSON.stringify(data.profile));
+          if (data.token) localStorage.setItem('aden_token', data.token);
           setIsLoginOpen(false);
           setCitizenName("");
           setCitizenEmailOrPhone("");
@@ -504,6 +513,7 @@ export default function App() {
     setFavorites([]);
     setCompareList([]);
     localStorage.removeItem("aden-user");
+    localStorage.removeItem("aden_token");
     localStorage.removeItem("aden-admin-auth");
     localStorage.removeItem("aden-citizen-props");
     localStorage.removeItem("aden-favorites");
@@ -881,7 +891,7 @@ export default function App() {
                     }
                     className="relative overflow-hidden rounded-2xl h-24 border border-white/5 bg-slate-900/30 backdrop-blur-xs text-right p-4 group transition-all hover:border-[#F27D26]/30 cursor-pointer"
                   >
-                    <img
+                    <img loading="lazy"
                       src={cat.img}
                       referrerPolicy="no-referrer"
                       alt={cat.label}
@@ -1342,7 +1352,7 @@ export default function App() {
           )}
 
         {/* VIEW 11: VERIFY AGREEMENT */}
-        {currentView === "verify-agreement" && <VerifyAgreement lang={lang} />}
+        {currentView === "verify-agreement" && <VerifyAgreement lang={lang} initialSerialNumber={verifySerialNumber} />}
 
         {/* VIEW 12: ELECTRONIC AGREEMENT FORM */}
         {currentView === "electronic-agreement-form" && (
@@ -2053,7 +2063,7 @@ export default function App() {
                               key={idx}
                               className="relative group aspect-square rounded-lg overflow-hidden border border-white/10 bg-black"
                             >
-                              <img
+                              <img loading="lazy"
                                 src={img}
                                 alt="preview"
                                 referrerPolicy="no-referrer"
@@ -2355,7 +2365,7 @@ export default function App() {
                     }}
                     className="flex gap-3 items-center p-2.5 rounded-xl bg-slate-900/40 border border-white/5 hover:border-[#F27D26]/30 transition-all cursor-pointer group"
                   >
-                    <img
+                    <img loading="lazy"
                       src={prop.images?.[0]}
                       alt={prop.title}
                       referrerPolicy="no-referrer"

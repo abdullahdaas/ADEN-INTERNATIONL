@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
+import { Search,
   Download,
   ShieldAlert,
   LayoutDashboard,
@@ -60,7 +60,7 @@ import {
   fetchVisits,
   fetchLogs,
   fetchOffers,
-  fetchComplaints,
+  fetchComplaints, fetchSettings,
   updateOffer,
   updateComplaint,
 } from "../utils/api";
@@ -86,6 +86,7 @@ export default function AdminPortal({
   const [loginError, setLoginError] = useState("");
 
   // Active Admin View State
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [adminView, setAdminView] = useState<
     | "dashboard"
     | "properties"
@@ -109,6 +110,7 @@ export default function AdminPortal({
     | "services"
     | "agreements"
     | "agreement-payments"
+    | "recycle"
   >("dashboard");
   const [selectedPaymentProof, setSelectedPaymentProof] = useState<any>(null);
   const [selectedAgreementRequest, setSelectedAgreementRequest] = useState<any>(null);
@@ -120,38 +122,17 @@ export default function AdminPortal({
   const [providerForm, setProviderForm] = useState({ name: '', category: '', governorate: '', city: '', address: '', description: '', logo: '', coverImage: '', yearsOfExperience: 0, status: 'معتمد' });
   const [isEditingProperty, setIsEditingProperty] = useState(false);
   const [editPropForm, setEditPropForm] = useState<any>(null);
-  const [agreementRequests, setAgreementRequests] = useState([
-    {
-      id: "req_1",
-      payerName: "أحمد محمود",
-      phone: "07812345678",
-      method: "zain_cash",
-      amount: "25,000",
-      date: new Date().toLocaleDateString("en-GB"),
-      status: "pending",
-    },
-    {
-      id: "req_2",
-      payerName: "علي حسين",
-      phone: "07712345678",
-      method: "qi_card",
-      amount: "25,000",
-      date: "12/03/2024",
-      status: "approved",
-    },
-  ]);
+  const [agreementRequests, setAgreementRequests] = useState<any[]>([]);
 
-  const handleApproveRequest = (id: string) => {
-    setAgreementRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "approved" } : r)),
-    );
+  const handleApproveRequest = async (id: string) => {
+    await updateAgreementStatus(id, 'active');
+    loadAdminData();
     alert("تم اعتماد الدفع وإصدار المكاتبة بنجاح");
   };
 
-  const handleRejectRequest = (id: string) => {
-    setAgreementRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)),
-    );
+  const handleRejectRequest = async (id: string) => {
+    await updateAgreementStatus(id, 'rejected');
+    loadAdminData();
     alert("تم رفض طلب الدفع");
   };
 
@@ -228,6 +209,7 @@ export default function AdminPortal({
       setProviderApplications(apps);
       const allDeals = await fetchDeals();
       const currentStats = await fetchStats();
+      try { const s = await fetchSettings(); setSettings(s); } catch (e) {}
 
       setProperties(allProps);
       setMessages(allMsgs);
@@ -301,6 +283,7 @@ export default function AdminPortal({
         setAdminUser(data.user);
         localStorage.setItem("aden-user", JSON.stringify(data.user));
         localStorage.setItem("aden-admin-auth", "true");
+        if (data.token) localStorage.setItem("aden-admin-token", data.token);
       } else {
         setLoginError(data.message);
       }
@@ -397,16 +380,21 @@ export default function AdminPortal({
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem("aden-admin-auth");
+    localStorage.removeItem("aden-admin-token");
     onLogout();
   };
 
   const handleApproveProperty = async (id: string) => {
     try {
-      await updateProperty(id, { isApproved: true, pendingDeletion: false });
+      await updateProperty(id, { isApproved: true, pendingDeletion: false, status: 'للبيع' });
       loadAdminData();
       onRefreshProperties();
+      alert("تمت الموافقة على العقار ونشره بنجاح");
     } catch (err) {
       console.error(err);
+      if (window.confirm("حدث خطأ أثناء الموافقة. هل تريد المحاولة مرة أخرى؟")) {
+        handleApproveProperty(id);
+      }
     }
   };
 
@@ -443,15 +431,32 @@ export default function AdminPortal({
     } catch (e) { console.error(e); }
   };
 
-  const handleDeleteProperty = async (id: string) => {
-    if (!window.confirm("هل أنت متأكد من رغبتك في حذف هذا العقار نهائياً؟"))
-      return;
+  const handleDeleteProperty = async (id: string, hard: boolean = false) => {
+    if (!window.confirm("هل أنت متأكد من رغبتك في حذف هذا العقار نهائياً؟")) return;
     try {
-      await deleteProperty(id);
+      await deleteProperty(id, hard);
       loadAdminData();
       onRefreshProperties();
+      alert("تم حذف العقار بنجاح");
     } catch (err) {
       console.error(err);
+      if (window.confirm("حدث خطأ أثناء الحذف. هل تريد المحاولة مرة أخرى؟")) {
+        handleDeleteProperty(id, hard);
+      }
+    }
+  };
+  
+  const handleRestoreProperty = async (id: string) => {
+    try {
+      await updateProperty(id, { pendingDeletion: false, isApproved: true, status: 'للبيع' });
+      loadAdminData();
+      onRefreshProperties();
+      alert("تم استعادة العقار بنجاح");
+    } catch (err) {
+      console.error(err);
+      if (window.confirm("حدث خطأ. المحاولة مرة أخرى؟")) {
+        handleRestoreProperty(id);
+      }
     }
   };
 
@@ -906,10 +911,7 @@ export default function AdminPortal({
                 {properties.filter((p) => p.isApproved).length}
               </span>
             </p>
-            <p className="flex justify-between">
-              <span>إجمالي المقيمين:</span>
-              <span className="font-bold text-white">مفعل</span>
-            </p>
+            
           </div>
 
           {/* Logout Trigger */}
@@ -925,6 +927,58 @@ export default function AdminPortal({
 
       {/* ADMIN WORKSPACE (3/4 width on desktop) */}
       <div className="lg:col-span-3 space-y-6">
+        <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-4">
+          <div className="flex items-center gap-3">
+            <Search className="h-5 w-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="البحث في السجلات (العقارات، المستخدمين، المشاريع، المكاتبات، الدفعات)..."
+              value={adminSearchQuery}
+              onChange={(e) => setAdminSearchQuery(e.target.value)}
+              className="w-full bg-transparent border-none text-white focus:ring-0 text-sm font-sans placeholder-slate-500"
+            />
+            {adminSearchQuery && (
+              <button onClick={() => setAdminSearchQuery('')} className="text-slate-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+        {/* RECYCLE BIN */}
+        {adminView === "recycle" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-white mb-6">سلة المهملات</h2>
+            <div className="bg-slate-950/50 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="border-b border-white/10 text-slate-400">
+                    <tr>
+                      <th className="pb-3 pr-4 font-bold">رقم العقار</th>
+                      <th className="pb-3 pr-4 font-bold">العنوان</th>
+                      <th className="pb-3 pr-4 font-bold">تاريخ الحذف</th>
+                      <th className="pb-3 pr-4 font-bold">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {properties.filter(p => p.pendingDeletion).map(p => (
+                      <tr key={p.id} className="hover:bg-white/5 transition-colors text-slate-300">
+                        <td className="py-4 pr-4 font-mono">{p.id.slice(0, 8)}</td>
+                        <td className="py-4 pr-4">{p.title}</td>
+                        <td className="py-4 pr-4">{new Date(p.updatedAt).toLocaleDateString('ar-IQ')}</td>
+                        <td className="py-4 pr-4">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleRestoreProperty(p.id)} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30">استعادة</button>
+                            <button onClick={() => handleDeleteProperty(p.id, true)} className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">حذف نهائي</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
         {/* VIEW 1: ADMIN DASHBOARD */}
         {adminView === "dashboard" && (
           <div className="space-y-6 animate-fade-in">
@@ -1034,13 +1088,13 @@ export default function AdminPortal({
             </div>
 
             <div className="space-y-4">
-              {properties?.map((p) => (
+              {properties?.filter(p => !p.pendingDeletion).filter(p => !adminSearchQuery || (p.title?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.ownerEmailOrPhone?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.id?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).map((p) => (
                 <div
                   key={p.id}
                   className="p-5 rounded-2xl border border-white/5 bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="flex gap-4 items-center min-w-0">
-                    <img
+                    <img loading="lazy"
                       src={p.images?.[0]}
                       alt="listing"
                       referrerPolicy="no-referrer"
@@ -1099,10 +1153,10 @@ export default function AdminPortal({
                       id={`btn-admin-delete-${p.id}`}
                       onClick={() => handleDeleteProperty(p.id)}
                       className="rounded-lg bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-2 text-xs font-bold flex items-center gap-1 cursor-pointer"
-                      title="حذف العقار"
+                      title="رفض وحذف"
                     >
                       <Trash2 className="h-4 w-4" />
-                      <span>حذف</span>
+                      <span>رفض وحذف</span>
                     </button>
                   </div>
                 </div>
@@ -1593,8 +1647,7 @@ export default function AdminPortal({
                 هذه اللوحة تعرض العقارات المعروضة في مزاد.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {properties
-                  .filter((p) => p.isAuction)
+                {properties.filter(p => !adminSearchQuery || (p.title?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.ownerEmailOrPhone?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.id?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).filter((p) => p.isAuction)
                   ?.map((p) => (
                     <div
                       key={p.id}
@@ -2056,7 +2109,7 @@ export default function AdminPortal({
                   إجمالي الإيرادات
                 </span>
                 <span className="block text-xl font-black text-white font-mono mt-1">
-                  24,500,000 د.ع
+                  {payments.filter(p => p.status === 'approved').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString('ar-IQ')} د.ع
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2064,7 +2117,7 @@ export default function AdminPortal({
                   إيرادات الإعلانات المميزة
                 </span>
                 <span className="block text-xl font-black text-white font-mono mt-1">
-                  12,000,000 د.ع
+                  {payments.filter(p => p.status === 'approved' && p.paymentType === 'featured_ad').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString('ar-IQ')} د.ع
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2072,7 +2125,7 @@ export default function AdminPortal({
                   اشتراكات المزادات
                 </span>
                 <span className="block text-xl font-black text-white font-mono mt-1">
-                  8,500,000 د.ع
+                  {payments.filter(p => p.status === 'approved' && p.paymentType === 'auction').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString('ar-IQ')} د.ع
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2080,7 +2133,7 @@ export default function AdminPortal({
                   المكاتبات الإلكترونية
                 </span>
                 <span className="block text-xl font-black text-white font-mono mt-1">
-                  4,000,000 د.ع
+                  {payments.filter(p => p.status === 'approved' && p.paymentType === 'electronic_agreement').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString('ar-IQ')} د.ع
                 </span>
               </div>
             </div>
@@ -2090,9 +2143,9 @@ export default function AdminPortal({
                 سجل الأنشطة المالية (Recent Transactions)
               </h3>
               <div className="space-y-3">
-                {[1, 2, 3]?.map((i) => (
+                {payments.slice(0, 5).map((pay) => (
                   <div
-                    key={i}
+                    key={pay.id}
                     className="flex justify-between items-center p-3 rounded-xl bg-slate-950 border border-white/5 text-xs text-slate-300"
                   >
                     <div className="flex items-center gap-3">
@@ -2100,20 +2153,15 @@ export default function AdminPortal({
                         <Banknote className="h-4 w-4" />
                       </div>
                       <div>
-                        <span className="block font-bold text-white">
-                          ترقية إعلان مميز
-                        </span>
-                        <span className="text-slate-500">
-                          بواسطة: أحمد علي • بطاقة زين كاش
-                        </span>
+                        <span className="block font-bold text-white">{pay.packageName === "auction_entry" ? "تأمين مزاد" : (pay.packageName === "agreement_fee" ? "رسوم مكاتبة" : "ترقية إعلان")}</span><span className="text-slate-500">بواسطة: {pay.senderPhone} • {pay.paymentMethod}</span>
                       </div>
                     </div>
                     <div className="text-left font-mono">
                       <span className="block font-bold text-emerald-400">
-                        +25,000 د.ع
+                        +{pay.amount.toLocaleString()} د.ع
                       </span>
                       <span className="text-xs text-slate-500">
-                        {new Date().toLocaleDateString("ar-IQ")}
+                        {pay.createdAt ? new Date(pay.createdAt).toLocaleDateString("ar-IQ") : ""}
                       </span>
                     </div>
                   </div>
@@ -2148,7 +2196,7 @@ export default function AdminPortal({
                   إجمالي الزوار
                 </span>
                 <span className="block text-2xl font-black text-white font-mono mt-1">
-                  45,210
+                  {visits.length}
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2156,7 +2204,7 @@ export default function AdminPortal({
                   العقارات المنشورة
                 </span>
                 <span className="block text-2xl font-black text-white font-mono mt-1">
-                  1,204
+                  {properties.length}
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2164,7 +2212,7 @@ export default function AdminPortal({
                   العقارات المباعة
                 </span>
                 <span className="block text-2xl font-black text-emerald-400 font-mono mt-1">
-                  842
+                  {deals.length}
                 </span>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
@@ -2172,7 +2220,7 @@ export default function AdminPortal({
                   مستخدمين نشطين
                 </span>
                 <span className="block text-2xl font-black text-[#F27D26] font-mono mt-1">
-                  3,490
+                  {profiles.length}
                 </span>
               </div>
             </div>
@@ -2340,34 +2388,26 @@ export default function AdminPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  <tr className="text-slate-300 hover:bg-white/[0.02]">
-                    <td className="py-3 px-4">إعلان فلل المنصور</td>
-                    <td className="py-3 px-4">شريط البحث</td>
-                    <td className="py-3 px-4">2026-08-01</td>
-                    <td className="py-3 px-4">12,500 (342)</td>
-                    <td className="py-3 px-4">
-                      <span className="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
-                        نشط
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <button className="text-blue-400">تعديل</button>
-                    </td>
-                  </tr>
-                  <tr className="text-slate-300 hover:bg-white/[0.02]">
-                    <td className="py-3 px-4">مجمع الزهور السكني</td>
-                    <td className="py-3 px-4">الصفحة الرئيسية</td>
-                    <td className="py-3 px-4">2026-07-15</td>
-                    <td className="py-3 px-4">8,200 (150)</td>
-                    <td className="py-3 px-4">
-                      <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
-                        معلق
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <button className="text-blue-400">تعديل</button>
-                    </td>
-                  </tr>
+                  {properties.filter(p => p.isFeatured).length > 0 ? properties.filter(p => p.isFeatured).map(p => (
+                    <tr key={p.id} className="text-slate-300 hover:bg-white/[0.02]">
+                      <td className="py-3 px-4">{p.title}</td>
+                      <td className="py-3 px-4">إعلان مميز</td>
+                      <td className="py-3 px-4">--</td>
+                      <td className="py-3 px-4">{p.views || 0}</td>
+                      <td className="py-3 px-4">
+                        <span className="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
+                          نشط
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button className="text-red-400" onClick={() => {/* TODO unfeature */}}>إلغاء التمييز</button>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-500">لا توجد إعلانات مميزة نشطة</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2400,7 +2440,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="text"
-                        defaultValue="عدن للوساطة العقارية"
+                        value={settings.platformName || "عدن للوساطة العقارية"} onChange={e => setSettings({...settings, platformName: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2410,7 +2450,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="email"
-                        defaultValue="admin@aden-realestate.com"
+                        value={settings.contactEmail || "admin@aden-realestate.com"} onChange={e => setSettings({...settings, contactEmail: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2420,7 +2460,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="text"
-                        defaultValue="+964 780 000 0000"
+                        value={settings.contactPhone || "+964 780 000 0000"} onChange={e => setSettings({...settings, contactPhone: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                         dir="ltr"
                       />
@@ -2475,7 +2515,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="number"
-                        defaultValue="25000"
+                        value={settings.agreementFee || "25000"} onChange={e => setSettings({...settings, agreementFee: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2485,7 +2525,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="number"
-                        defaultValue="100000"
+                        value={settings.premiumAdFee || "100000"} onChange={e => setSettings({...settings, premiumAdFee: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2495,7 +2535,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="number"
-                        defaultValue="15000"
+                        value={settings.providerFee || "15000"} onChange={e => setSettings({...settings, providerFee: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2514,7 +2554,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="password"
-                        defaultValue="**********************"
+                        value={settings.mastercard || ""} onChange={e => setSettings({...settings, mastercard: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2524,7 +2564,7 @@ export default function AdminPortal({
                       </label>
                       <input
                         type="text"
-                        defaultValue="ZC_123456"
+                        value={settings.zainCash || ""} onChange={(e) => setSettings({...settings, zainCash: e.target.value})}
                         className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white"
                       />
                     </div>
@@ -2576,7 +2616,7 @@ export default function AdminPortal({
                   {serviceProviders.map(prov => (
                     <tr key={prov.id} className="text-slate-300 hover:bg-white/[0.02]">
                       <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                        {prov.logo && <img src={prov.logo} className="w-6 h-6 rounded-full" alt="logo" />}
+                        {prov.logo && <img loading="lazy" src={prov.logo} className="w-6 h-6 rounded-full" alt="logo" />}
                         {prov.name}
                       </td>
                       <td className="py-3 px-4">{prov.category}</td>
@@ -2775,7 +2815,7 @@ export default function AdminPortal({
                       </div>
                       {showApplicationModal.documentUrl && (
                         <div className="col-span-2">
-                          <a href={showApplicationModal.documentUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex items-center gap-2">
+                          <a href={showApplicationModal.documentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline flex items-center gap-2">
                             <Download className="w-4 h-4" /> عرض المستندات المرفقة
                           </a>
                         </div>
@@ -2855,7 +2895,7 @@ export default function AdminPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {agreementRequests.map((agr) => (
+                  {agreementRequests.filter(agr => !adminSearchQuery || (agr.buyerName?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || agr.sellerName?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || agr.serialNumber?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || agr.propertyDetails?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || agr.createdAt?.includes(adminSearchQuery) || agr.status?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).map((agr) => (
                     <tr key={agr.id} className="text-slate-300 hover:bg-white/[0.02]">
                       <td className="py-3 px-4 font-bold text-white font-mono">{agr.serialNumber}</td>
                       <td className="py-3 px-4">{agr.buyerName}</td>
@@ -2916,7 +2956,7 @@ export default function AdminPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {agreementRequests.map((req) => (
+                  {agreementRequests.filter(req => !adminSearchQuery || (req.buyerName?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || req.sellerName?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || req.serialNumber?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).map((req) => (
                     <tr
                       key={req.id}
                       className="text-slate-300 hover:bg-white/[0.02]"
@@ -2949,12 +2989,12 @@ export default function AdminPortal({
                       </td>
                       <td className="py-3 px-4 font-sans">{req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB') : 'غير متوفر'}</td>
                       <td className="py-3 px-4">
-                        {req.status === "pending" && (
+                        {req.status === "pending_payment" && (
                           <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
                             بانتظار المراجعة
                           </span>
                         )}
-                        {req.status === "approved" && (
+                        {req.status === "active" && (
                           <span className="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
                             معتمدة
                           </span>
@@ -2972,7 +3012,7 @@ export default function AdminPortal({
                         >
                           عرض الإثبات
                         </button>
-                        {req.status === "pending" && (
+                        {req.status === "pending_payment" && (
                           <>
                             <button
                               onClick={() => handleApproveRequest(req.id)}
@@ -3056,11 +3096,10 @@ export default function AdminPortal({
                       <a
                         key={i}
                         href={img}
-                        target="_blank"
-                        rel="noreferrer"
+                        target="_blank" rel="noopener noreferrer"
                         className="relative h-20 rounded-lg overflow-hidden border border-white/5 hover:border-[#F27D26] block"
                       >
-                        <img
+                        <img loading="lazy"
                           src={img}
                           alt="Property"
                           className="h-full w-full object-cover"
@@ -3079,8 +3118,7 @@ export default function AdminPortal({
                     <div className="rounded-xl overflow-hidden border border-white/5 bg-black h-24 flex items-center justify-center p-2">
                       <a
                         href={selectedInspectProperty.videoUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                        target="_blank" rel="noopener noreferrer"
                         className="text-xs font-bold text-[#F27D26] underline hover:text-[#ff8a3d]"
                       >
                         اضغط لفتح ومعاينة رابط الفيديو المرفق ↗
@@ -3294,7 +3332,7 @@ export default function AdminPortal({
                   className="rounded-xl bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 text-rose-400 hover:text-white px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span>حذف نهائي</span>
+                  <span>رفض / حذف نهائي</span>
                 </button>
                 <button
                   type="button"
@@ -3332,7 +3370,7 @@ export default function AdminPortal({
                   <div className="text-sm"><span className="text-slate-400">تاريخ الطلب:</span> <span className="text-white">{selectedAgreementRequest.createdAt ? new Date(selectedAgreementRequest.createdAt).toLocaleString('en-GB') : 'غير متوفر'}</span></div>
                 </div>
                 <div className="bg-white p-2 rounded-lg">
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${selectedAgreementRequest.serialNumber}`} alt="QR Code" className="w-20 h-20" />
+                  <img loading="lazy" src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${selectedAgreementRequest.serialNumber}`} alt="QR Code" className="w-20 h-20" />
                 </div>
               </div>
 
@@ -3375,7 +3413,7 @@ export default function AdminPortal({
                 {selectedAgreementRequest.paymentProofUrl && (
                   <div className="mt-4">
                     <span className="text-slate-400 block mb-2">المرفقات (إثبات الدفع):</span>
-                    <a href={selectedAgreementRequest.paymentProofUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">عرض المرفق</a>
+                    <a href={selectedAgreementRequest.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">عرض المرفق</a>
                   </div>
                 )}
               </div>
