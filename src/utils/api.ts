@@ -95,7 +95,7 @@ export async function updateProperty(id: string, property: Partial<Property>): P
     headers: getAuthHeaders(),
     body: JSON.stringify(property)
   });
-  if (!res.ok) throw new Error('Failed to update property');
+  if (!res.ok) { const text = await res.text(); throw new Error('Failed to update property: ' + text); }
   return res.json();
 }
 
@@ -104,7 +104,7 @@ export async function deleteProperty(id: string, hard = false): Promise<boolean>
     method: 'DELETE',
     headers: getAuthHeaders()
   });
-  if (!res.ok) throw new Error('Failed to delete property');
+  if (!res.ok) { const text = await res.text(); throw new Error('Failed to delete property: ' + text); }
   const data = await res.json();
   return data.success;
 }

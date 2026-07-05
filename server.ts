@@ -661,6 +661,8 @@ app.post('/api/properties', requireAuth, async (req, res) => {
 });
 
 app.put('/api/properties/:id', requireAuth, async (req, res) => {
+  try {
+
   const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const p = await db.properties.getById(req.params.id);
@@ -733,9 +735,15 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
   } else {
     res.status(404).json({ error: 'Property not found' });
   }
+  } catch (error) {
+    console.error("PUT ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 app.delete('/api/properties/:id', requireAuth, async (req, res) => {
+  try {
+
   const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
   const p = await db.properties.getById(req.params.id);
@@ -771,6 +779,10 @@ app.delete('/api/properties/:id', requireAuth, async (req, res) => {
     res.json({ success: true, message: 'Property deleted' });
   } else {
     res.status(404).json({ error: 'Property not found' });
+  }
+  } catch (error) {
+    console.error("DELETE ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
