@@ -159,7 +159,7 @@ export default function UserProfileView({ profileIdentity, lang, onBack, onViewP
                 : 'Join now to offer your engineering, legal, or maintenance services to thousands of clients on Aden Platform.'}
             </p>
           </div>
-          <button className="bg-white/10 hover:bg-[#F27D26] text-[#ffffff] px-5 py-2.5 rounded-lg text-xs font-bold transition-all border border-white/10 hover:border-[#F27D26]">
+          <button onClick={() => alert(lang === "ar" ? "نموذج التسجيل سيكون متاحاً قريباً" : "Registration form will be available soon")} className="bg-white/10 hover:bg-[#F27D26] text-[#ffffff] px-5 py-2.5 rounded-lg text-xs font-bold transition-all border border-white/10 hover:border-[#F27D26]">
             {lang === 'ar' ? 'تسجيل كمقدم خدمة' : 'Register as Provider'}
           </button>
         </div>

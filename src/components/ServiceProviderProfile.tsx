@@ -109,7 +109,7 @@ export default function ServiceProviderProfile({
             >
               <Phone className="h-5 w-5" /> اتصال
             </a>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all">
+            <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all">
               <MessageSquare className="h-5 w-5" /> محادثة
             </button>
           </div>
@@ -236,7 +236,7 @@ export default function ServiceProviderProfile({
                       </p>
                     </div>
                   </div>
-                  <button className="bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                  <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all">
                     أضف تقييمك
                   </button>
                 </div>
@@ -314,7 +314,7 @@ export default function ServiceProviderProfile({
                 <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80')] bg-cover bg-center"></div>
                 <MapPin className="h-8 w-8 text-red-500 relative z-10" />
               </div>
-              <button className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg text-sm font-bold transition-all">
+              <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg text-sm font-bold transition-all">
                 <Navigation className="h-4 w-4" /> فتح في خرائط جوجل
               </button>
             </div>

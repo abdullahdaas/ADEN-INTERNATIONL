@@ -652,11 +652,7 @@ export default function App() {
       loadData();
     } catch (err: any) {
       console.error(err);
-      setAddError(
-        lang === "ar"
-          ? "فشل إضافة العقار، يرجى التحقق من المدخلات!"
-          : "Failed to add property, please check inputs!",
-      );
+      setAddError(err.message || (lang === "ar" ? "فشل إضافة العقار" : "Failed to add property"));
     }
   };
 

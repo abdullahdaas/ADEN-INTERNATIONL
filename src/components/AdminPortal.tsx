@@ -87,6 +87,7 @@ export default function AdminPortal({
 
   // Active Admin View State
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [adminFilterStatus, setAdminFilterStatus] = useState('');
   const [adminView, setAdminView] = useState<
     | "dashboard"
     | "properties"
@@ -121,6 +122,10 @@ export default function AdminPortal({
   const [editingProvider, setEditingProvider] = useState<any>(null);
   const [providerForm, setProviderForm] = useState({ name: '', category: '', governorate: '', city: '', address: '', description: '', logo: '', coverImage: '', yearsOfExperience: 0, status: 'معتمد' });
   const [isEditingProperty, setIsEditingProperty] = useState(false);
+  const [isAddingCampaign, setIsAddingCampaign] = useState(false);
+  const [spSearchTerm, setSpSearchTerm] = useState("");
+  const [spFilterCategory, setSpFilterCategory] = useState("");
+  const [campaignPropId, setCampaignPropId] = useState("");
   const [editPropForm, setEditPropForm] = useState<any>(null);
   const [agreementRequests, setAgreementRequests] = useState<any[]>([]);
 
@@ -392,9 +397,7 @@ export default function AdminPortal({
       alert("تمت الموافقة على العقار ونشره بنجاح");
     } catch (err) {
       console.error(err);
-      if (window.confirm("حدث خطأ أثناء الموافقة. هل تريد المحاولة مرة أخرى؟")) {
-        handleApproveProperty(id);
-      }
+      alert((err as Error)?.message || "حدث خطأ أثناء الموافقة")
     }
   };
 
@@ -406,7 +409,7 @@ export default function AdminPortal({
       if (selectedInspectProperty?.id === p.id) {
         setSelectedInspectProperty({ ...p, isFeatured: !p.isFeatured });
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
   };
   
   const handleToggleSuspend = async (p: Property) => {
@@ -418,7 +421,7 @@ export default function AdminPortal({
       if (selectedInspectProperty?.id === p.id) {
         setSelectedInspectProperty({ ...p, isSuspended: newStatus, isApproved: !newStatus });
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
   };
 
   const handleSaveEditProperty = async () => {
@@ -428,7 +431,7 @@ export default function AdminPortal({
       onRefreshProperties();
       setSelectedInspectProperty(editPropForm);
       setIsEditingProperty(false);
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
   };
 
   const handleDeleteProperty = async (id: string, hard: boolean = false) => {
@@ -440,9 +443,7 @@ export default function AdminPortal({
       alert("تم حذف العقار بنجاح");
     } catch (err) {
       console.error(err);
-      if (window.confirm("حدث خطأ أثناء الحذف. هل تريد المحاولة مرة أخرى؟")) {
-        handleDeleteProperty(id, hard);
-      }
+      alert(err.message || "حدث خطأ أثناء الحذف")
     }
   };
   
@@ -454,7 +455,7 @@ export default function AdminPortal({
       alert("تم استعادة العقار بنجاح");
     } catch (err) {
       console.error(err);
-      if (window.confirm("حدث خطأ. المحاولة مرة أخرى؟")) {
+      if (window.confirm(((err as Error)?.message || "حدث خطأ") + ". المحاولة مرة أخرى؟")) {
         handleRestoreProperty(id);
       }
     }
@@ -1087,8 +1088,33 @@ export default function AdminPortal({
               </p>
             </div>
 
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="text" 
+                placeholder="ابحث برقم العقار، العنوان، أو بيانات المالك..." 
+                className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm"
+                value={adminSearchQuery}
+                onChange={e => setAdminSearchQuery(e.target.value)}
+              />
+              <select
+                className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm"
+                value={adminFilterStatus}
+                onChange={e => setAdminFilterStatus(e.target.value)}
+              >
+                <option value="">جميع الحالات</option>
+                <option value="موافقة">موافق عليها</option>
+                <option value="قيد الانتظار">قيد المراجعة</option>
+                <option value="مرفوض">مرفوضة</option>
+              </select>
+            </div>
             <div className="space-y-4">
-              {properties?.filter(p => !p.pendingDeletion).filter(p => !adminSearchQuery || (p.title?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.ownerEmailOrPhone?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.id?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).map((p) => (
+              {properties?.filter(p => !p.pendingDeletion)
+  .filter(p => !adminFilterStatus || 
+    (adminFilterStatus === "موافقة" ? p.isApproved : 
+    (adminFilterStatus === "قيد الانتظار" ? !p.isApproved && p.status !== 'مرفوض' : p.status === 'مرفوض'))
+  )
+  .filter(p => !adminSearchQuery || (p.title?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.ownerEmailOrPhone?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || p.id?.toLowerCase().includes(adminSearchQuery.toLowerCase()))).map((p) => (
                 <div
                   key={p.id}
                   className="p-5 rounded-2xl border border-white/5 bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
@@ -2168,10 +2194,10 @@ export default function AdminPortal({
                 ))}
               </div>
               <div className="mt-4 flex gap-2">
-                <button className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
                   تصدير PDF
                 </button>
-                <button className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
                   تصدير Excel
                 </button>
               </div>
@@ -2288,7 +2314,7 @@ export default function AdminPortal({
                   تعديل الصفحات، المقالات، البنرات الإعلانية وسياسات المنصة
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
+              <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="flex items-center gap-2 bg-[#F27D26] text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#d96a1a]">
                 <Plus className="h-4 w-4" /> صفحة جديدة
               </button>
             </div>
@@ -2310,7 +2336,7 @@ export default function AdminPortal({
                       className="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-white/5"
                     >
                       <span className="text-slate-300">{page}</span>
-                      <button className="text-blue-400 hover:text-blue-300">
+                      <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-blue-400 hover:text-blue-300">
                         تحرير
                       </button>
                     </div>
@@ -2333,7 +2359,7 @@ export default function AdminPortal({
                       <span className="text-slate-300 truncate w-3/4">
                         {article}
                       </span>
-                      <button className="text-blue-400 hover:text-blue-300">
+                      <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-blue-400 hover:text-blue-300">
                         تحرير
                       </button>
                     </div>
@@ -2368,7 +2394,7 @@ export default function AdminPortal({
                   التحكم بالحملات الإعلانية المدفوعة ومساحات العرض في المنصة
                 </p>
               </div>
-              <button className="flex items-center gap-2 bg-emerald-600 text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500">
+              <button onClick={() => setIsAddingCampaign(true)} className="flex items-center gap-2 bg-emerald-600 text-[#ffffff] px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500">
                 <Plus className="h-4 w-4" /> حملة جديدة
               </button>
             </div>
@@ -2400,7 +2426,7 @@ export default function AdminPortal({
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <button className="text-red-400" onClick={() => {/* TODO unfeature */}}>إلغاء التمييز</button>
+                        <button className="text-red-400" onClick={() => handleToggleFeatured(p)}>إلغاء التمييز</button>
                       </td>
                     </tr>
                   )) : (
@@ -2574,7 +2600,7 @@ export default function AdminPortal({
             </div>
 
             <div className="flex justify-end pt-4">
-              <button className="bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg">
+              <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg">
                 حفظ جميع الإعدادات
               </button>
             </div>
@@ -2600,6 +2626,27 @@ export default function AdminPortal({
               </button>
             </div>
             
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <input 
+                type="text" 
+                placeholder="بحث عن مزود خدمة..." 
+                className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm"
+                value={spSearchTerm}
+                onChange={e => setSpSearchTerm(e.target.value)}
+              />
+              <select
+                className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm"
+                value={spFilterCategory}
+                onChange={e => setSpFilterCategory(e.target.value)}
+              >
+                <option value="">جميع الفئات</option>
+                <option value="مقاولات وبناء">مقاولات وبناء</option>
+                <option value="تصميم داخلي">تصميم داخلي</option>
+                <option value="نقل أثاث">نقل أثاث</option>
+                <option value="صيانة وتنظيف">صيانة وتنظيف</option>
+                <option value="استشارات هندسية">استشارات هندسية</option>
+              </select>
+            </div>
             <div className="overflow-x-auto bg-slate-900/50 rounded-2xl border border-white/5 mb-8">
               <table className="w-full text-right text-xs">
                 <thead className="bg-slate-950/80">
@@ -2613,7 +2660,10 @@ export default function AdminPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {serviceProviders.map(prov => (
+                  {serviceProviders
+                    .filter(p => !spSearchTerm || p.name.includes(spSearchTerm) || p.description?.includes(spSearchTerm))
+                    .filter(p => !spFilterCategory || p.category === spFilterCategory)
+                    .map(prov => (
                     <tr key={prov.id} className="text-slate-300 hover:bg-white/[0.02]">
                       <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
                         {prov.logo && <img loading="lazy" src={prov.logo} className="w-6 h-6 rounded-full" alt="logo" />}
@@ -3447,6 +3497,57 @@ export default function AdminPortal({
           </div>
         </div>
       )}
+
+      {isAddingCampaign && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-md p-6">
+            <h3 className="text-xl font-bold text-white mb-4 text-right">إضافة حملة إعلانية (تمييز عقار)</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-2 text-right">اختر العقار لتمييزه</label>
+                <select 
+                  className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-white text-right"
+                  value={campaignPropId}
+                  onChange={(e) => setCampaignPropId(e.target.value)}
+                  dir="rtl"
+                >
+                  <option value="">-- اختر عقاراً --</option>
+                  {properties.filter(p => !p.isFeatured && (p.status === "للبيع" || p.status === "للإيجار")).map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={async () => {
+                    if (!campaignPropId) return;
+                    try {
+                      await updateProperty(campaignPropId, { isFeatured: true });
+                      loadAdminData();
+                      onRefreshProperties();
+                      setIsAddingCampaign(false);
+                      setCampaignPropId("");
+                      alert("تمت إضافة الحملة بنجاح");
+                    } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ أثناء إضافة الحملة"); }
+                  }}
+                  className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-[#ffffff] hover:bg-emerald-500"
+                >
+                  حفظ
+                </button>
+                <button
+                  onClick={() => setIsAddingCampaign(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-700"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+  
     </div>
   );
 }

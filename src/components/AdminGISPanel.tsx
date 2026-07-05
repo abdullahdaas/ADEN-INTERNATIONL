@@ -177,13 +177,13 @@ export function AdminGISPanel({ properties, onRefresh }: AdminGISPanelProps) {
               <p className="text-xs text-slate-400 mb-4">{selectedProperty.governorate} - {selectedProperty.district}</p>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <button className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
                   <Check className="h-3 w-3" /> اعتماد الموقع
                 </button>
-                <button className="bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
                   <Edit2 className="h-3 w-3" /> تعديل يدوي
                 </button>
-                <button className="col-span-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="col-span-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
                   <Trash2 className="h-3 w-3" /> رفض الإحداثيات
                 </button>
               </div>
@@ -265,10 +265,10 @@ export function AdminGISPanel({ properties, onRefresh }: AdminGISPanelProps) {
       {activeTab === 'data' && (
         <div className="space-y-6 font-sans">
           <div className="flex gap-4">
-            <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+            <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
               <Download className="w-4 h-4" /> تصدير GIS (GeoJSON)
             </button>
-            <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+            <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
               <Upload className="w-4 h-4" /> استيراد GIS (GeoJSON)
             </button>
           </div>
@@ -285,7 +285,7 @@ export function AdminGISPanel({ properties, onRefresh }: AdminGISPanelProps) {
             <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden">
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-900">
                 <h3 className="text-sm font-bold text-white">إدارة المحافظات والأقضية</h3>
-                <button className="text-[#F27D26] hover:text-[#ff8a3d] text-xs flex items-center gap-1 font-bold">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-[#F27D26] hover:text-[#ff8a3d] text-xs flex items-center gap-1 font-bold">
                   <Plus className="w-3 h-3" /> إضافة جديدة
                 </button>
               </div>
@@ -300,7 +300,7 @@ export function AdminGISPanel({ properties, onRefresh }: AdminGISPanelProps) {
             <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden">
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-900">
                 <h3 className="text-sm font-bold text-white">إدارة النقاط الدالة (Landmarks)</h3>
-                <button className="text-[#F27D26] hover:text-[#ff8a3d] text-xs flex items-center gap-1 font-bold">
+                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-[#F27D26] hover:text-[#ff8a3d] text-xs flex items-center gap-1 font-bold">
                   <Plus className="w-3 h-3" /> إضافة نقطة دالة
                 </button>
               </div>

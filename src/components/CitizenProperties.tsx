@@ -655,7 +655,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleAvatarChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
-                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع صورة</button>
+                    <button type="button" onClick={() => alert("قريباً - الميزة قيد التطوير")} className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع صورة</button>
                   </div>
                 </div>
               </div>
@@ -669,7 +669,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
                   </div>
                   <div className="relative flex-1">
                     <input type="file" accept="image/*" onChange={handleCoverChange} className="absolute inset-0 opacity-0 cursor-pointer h-full w-full" />
-                    <button type="button" className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع غلاف</button>
+                    <button type="button" onClick={() => alert("قريباً - الميزة قيد التطوير")} className="w-full rounded-lg bg-white/5 border border-white/5 text-xs py-1.5 text-slate-300 font-bold hover:bg-white/10 transition-all">رفع غلاف</button>
                   </div>
                 </div>
               </div>

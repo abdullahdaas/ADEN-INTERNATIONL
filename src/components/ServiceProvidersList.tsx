@@ -242,7 +242,7 @@ export default function ServiceProvidersList({
             <Briefcase className="h-5 w-5 text-[#F27D26]" />
             مقدمي الخدمات ({filteredProviders.length})
           </h2>
-          <button className="text-sm font-bold text-[#F27D26] hover:underline flex items-center gap-1">
+          <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-sm font-bold text-[#F27D26] hover:underline flex items-center gap-1">
             <Filter className="h-4 w-4" /> ترتيب حسب
           </button>
         </div>
@@ -311,7 +311,7 @@ export default function ServiceProvidersList({
                     <span className="text-xs text-slate-500 font-mono">
                       {provider.yearsOfExperience} سنوات خبرة
                     </span>
-                    <button className="text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
+                    <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
                       عرض التفاصيل
                     </button>
                   </div>

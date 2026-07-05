@@ -15,7 +15,7 @@ export async function loginAdmin(username: string, password: string) {
 function getAuthHeaders(): HeadersInit {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   try {
-    const token = localStorage.getItem('aden_token') || localStorage.getItem('aden-admin-token');
+    const token = localStorage.getItem('aden-admin-token') || localStorage.getItem('aden_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -39,7 +39,7 @@ function getAuthHeaders(): HeadersInit {
 function getAuthHeadersGET(): HeadersInit {
   const headers: Record<string, string> = {};
   try {
-    const token = localStorage.getItem('aden_token') || localStorage.getItem('aden-admin-token');
+    const token = localStorage.getItem('aden-admin-token') || localStorage.getItem('aden_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

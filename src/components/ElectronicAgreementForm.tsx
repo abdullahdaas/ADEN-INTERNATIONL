@@ -120,12 +120,10 @@ export default function ElectronicAgreementForm({
         }
         setNewAgreementId(data.agreement.id);
         setStep(3);
-      } else {
-        alert('حدث خطأ أثناء إرسال الطلب');
-      }
+      } else { alert(data.message || "حدث خطأ أثناء إرسال الطلب"); }
     } catch (err) {
       console.error(err);
-      alert('حدث خطأ أثناء إرسال الطلب');
+      alert((err as Error)?.message || "حدث خطأ أثناء إرسال الطلب");
     } finally {
       setIsSubmitting(false);
     }
