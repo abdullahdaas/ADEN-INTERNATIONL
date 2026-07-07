@@ -14,99 +14,10 @@ import {
 import { ServiceProvider } from "../types";
 import { submitProviderApplication, fetchServiceProviders } from "../utils/api";
 import { IRAQ_LOCATIONS } from "../data/iraqLocations";
+import { MaterialsProviderForm } from "./MaterialsProviderForm";
+import { CONSTRUCTION_MATERIALS } from "../data/constructionMaterials";
 
-const MOCK_PROVIDERS: ServiceProvider[] = [
-  {
-    id: "sp1",
-    userId: "user1",
-    name: "مكتب الرواد للمساحة",
-    category: "مكاتب المساحة والمساحين",
-    logo: "https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?w=200&h=200&fit=crop",
-    coverImage:
-      "https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?w=800&h=400&fit=crop",
-    description:
-      "مكتب هندسي متخصص في أعمال المساحة والخرائط الطبوغرافية وتقسيم الأراضي وإصدار السندات العقارية.",
-    yearsOfExperience: 15,
-    governorate: "بغداد",
-    city: "المنصور",
-    address: "شارع 14 رمضان، عمارة الأندلس",
-    coordinates: { lat: 33.3152, lng: 44.3661 },
-    contactNumbers: ["07801234567"],
-    email: "info@alrowad-survey.com",
-    socialMedia: {},
-    workingHours: "8:00 صباحاً - 4:00 مساءً",
-    portfolio: [],
-    rating: 4.8,
-    reviewCount: 42,
-    clientCount: 1500,
-    views: 340,
-    subscriptionPlan: "business",
-    isVerified: true,
-    isPromoted: true,
-    createdAt: new Date().toISOString(),
-    status: "approved",
-  },
-  {
-    id: "sp2",
-    userId: "user2",
-    name: "شركة البيت الحديث للمقاولات",
-    category: "شركات البناء والمقاولات",
-    logo: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=200&h=200&fit=crop",
-    coverImage:
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&h=400&fit=crop",
-    description:
-      "متخصصون في بناء الفلل والمجمعات السكنية بأعلى معايير الجودة وتسليم مفتاح.",
-    yearsOfExperience: 10,
-    governorate: "أربيل",
-    city: "عينكاوا",
-    address: "شارع 100، مجمع امباير",
-    coordinates: { lat: 36.19, lng: 44.009 },
-    contactNumbers: ["07501234567"],
-    email: "contact@modernhouse-erbil.com",
-    socialMedia: {},
-    workingHours: "9:00 صباحاً - 5:00 مساءً",
-    portfolio: [],
-    rating: 4.6,
-    reviewCount: 28,
-    clientCount: 120,
-    views: 890,
-    subscriptionPlan: "pro",
-    isVerified: true,
-    isPromoted: false,
-    createdAt: new Date().toISOString(),
-    status: "approved",
-  },
-  {
-    id: "sp3",
-    userId: "user3",
-    name: "المستشار القانوني العقاري - أحمد جاسم",
-    category: "المحامون المختصون بالعقارات",
-    logo: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=200&h=200&fit=crop",
-    coverImage:
-      "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&h=400&fit=crop",
-    description:
-      "محامي متخصص في القضايا العقارية، نقل الملكية، حل النزاعات العقارية والمواريث.",
-    yearsOfExperience: 22,
-    governorate: "البصرة",
-    city: "العشار",
-    address: "شارع الاستقلال، مقابل المحكمة",
-    coordinates: { lat: 30.5081, lng: 47.8335 },
-    contactNumbers: ["07701234567"],
-    email: "lawyer.ahmed@example.com",
-    socialMedia: {},
-    workingHours: "9:00 صباحاً - 2:00 مساءً",
-    portfolio: [],
-    rating: 4.9,
-    reviewCount: 65,
-    clientCount: 400,
-    views: 1200,
-    subscriptionPlan: "free",
-    isVerified: true,
-    isPromoted: false,
-    createdAt: new Date().toISOString(),
-    status: "approved",
-  },
-];
+
 
 const CATEGORIES = [
   "مكاتب الوساطة العقارية",
@@ -119,61 +30,77 @@ const CATEGORIES = [
   "شركات الكهرباء والسباكة والتكييف",
   "شركات التنظيف",
   "شركات نقل الأثاث",
-  "شركات الحراسة والأمن",
-  "البنوك وشركات التمويل العقاري",
-  "شركات التأمين العقاري",
-  "أخرى",
 ];
 
-interface Props {
-  lang: "ar" | "en" | "ku";
+interface ServiceProvidersListProps {
+  lang: string;
   onSelectProvider: (provider: ServiceProvider) => void;
 }
 
 export default function ServiceProvidersList({
   lang,
   onSelectProvider,
-}: Props) {
+}: ServiceProvidersListProps) {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(true);
 
   useEffect(() => {
     fetchServiceProviders().then(data => {
-      if (data && data.length > 0) {
-        setProviders(data);
-      } else {
-        setProviders(MOCK_PROVIDERS);
-      }
+      setProviders(data || []);
       setLoadingProviders(false);
     }).catch(err => {
       console.error('Failed to fetch providers', err);
-      setProviders(MOCK_PROVIDERS);
+      setProviders([]);
       setLoadingProviders(false);
     });
   }, []);
+
+  const [mainTab, setMainTab] = useState<'services' | 'materials'>('services');
   const [searchTerm, setSearchTerm] = useState("");
   const [showAppModal, setShowAppModal] = useState(false);
+  const [showMaterialsModal, setShowMaterialsModal] = useState(false);
   const [appForm, setAppForm] = useState({ name: '', phone: '', category: '', governorate: '', details: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [categoryFilter, setCategoryFilter] = useState("");
   const [govFilter, setGovFilter] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("");
+  const [materialFilter, setMaterialFilter] = useState("");
+  const [deliveryFilter, setDeliveryFilter] = useState(false);
 
   const filteredProviders = providers.filter((p) => {
+    // Tab filter
+    if (mainTab === 'services' && p.category === 'المواد الإنشائية') return false;
+    if (mainTab === 'materials' && p.category !== 'المواد الإنشائية') return false;
+
     const matchesSearch =
       p.name.includes(searchTerm) || p.description.includes(searchTerm);
-    const matchesCategory = categoryFilter
+    
+    const matchesCategory = categoryFilter && mainTab === 'services'
       ? p.category === categoryFilter
       : true;
+      
     const matchesGov = govFilter ? p.governorate === govFilter : true;
-    return matchesSearch && matchesCategory && matchesGov;
+    const matchesDistrict = districtFilter ? p.district === districtFilter : true;
+    
+    const matchesMaterial = materialFilter && mainTab === 'materials'
+      ? p.materialsOffered?.includes(materialFilter)
+      : true;
+      
+    const matchesDelivery = deliveryFilter && mainTab === 'materials'
+      ? p.hasDelivery
+      : true;
+
+    return matchesSearch && matchesCategory && matchesGov && matchesDistrict && matchesMaterial && matchesDelivery;
   });
+
+  const selectedGov = IRAQ_LOCATIONS.find(g => g.governorate === govFilter);
 
   return (
     <div
       className="min-h-screen bg-royal-dark text-slate-300 pb-20"
       dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
     >
-      
       {/* Hero Section */}
       <div className="bg-gradient-to-b from-slate-900 to-royal-dark border-b border-white/5 py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -182,55 +109,121 @@ export default function ServiceProvidersList({
               مزودي الخدمات
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl">
-              دليل شامل لجميع مزودي الخدمات في العراق. ابحث عن مقاولين،
-              مهندسين، محامين، وشركات الصيانة الموثوقة والمعتمدة.
+              دليل شامل لجميع مزودي الخدمات في العراق. ابحث عن مقاولين، مهندسين، محامين، وشركات الصيانة، بالإضافة إلى موردي المواد الإنشائية.
             </p>
           </div>
-          <button onClick={() => setShowAppModal(true)} className="bg-[#F27D26] hover:bg-[#d96a1a] text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#F27D26]/20 shrink-0">
-            <Plus className="w-5 h-5" /> انضم كمزود خدمة
+          <button 
+            onClick={() => mainTab === 'services' ? setShowAppModal(true) : setShowMaterialsModal(true)} 
+            className="bg-[#F27D26] hover:bg-[#d96a1a] text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#F27D26]/20 shrink-0"
+          >
+            <Plus className="w-5 h-5" /> 
+            {mainTab === 'services' ? 'انضم كمزود خدمة' : 'تسجيل كمورد مواد'}
           </button>
         </div>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-4 bg-slate-900/50 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
 
-            <div className="flex-1 relative">
+        <div className="max-w-7xl mx-auto mb-8">
+          <div className="flex bg-slate-900/50 p-1 rounded-xl w-fit border border-white/10">
+            <button 
+              onClick={() => setMainTab('services')}
+              className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${mainTab === 'services' ? 'bg-[#F27D26] text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              الخدمات والمقاولات
+            </button>
+            <button 
+              onClick={() => setMainTab('materials')}
+              className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all ${mainTab === 'materials' ? 'bg-[#F27D26] text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              المواد الإنشائية
+            </button>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-4 bg-slate-900/50 p-4 rounded-2xl border border-white/10 backdrop-blur-md flex-wrap">
+            <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
               <input
                 type="text"
-                placeholder="ابحث عن اسم الشركة أو الخدمة..."
+                placeholder={mainTab === 'services' ? "ابحث عن اسم الشركة أو الخدمة..." : "ابحث عن اسم المورد أو المادة..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 pr-10 pl-4 text-white focus:border-[#F27D26] outline-none transition-all"
               />
             </div>
-            <div className="md:w-1/4">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
-              >
-                <option value="">جميع الفئات</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="md:w-1/4">
+            
+            {mainTab === 'services' && (
+              <div className="md:w-1/5 min-w-[150px]">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
+                >
+                  <option value="">جميع الفئات</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {mainTab === 'materials' && (
+              <div className="md:w-1/5 min-w-[150px]">
+                <select
+                  value={materialFilter}
+                  onChange={(e) => setMaterialFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
+                >
+                  <option value="">جميع المواد</option>
+                  {CONSTRUCTION_MATERIALS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="md:w-1/5 min-w-[150px]">
               <select
                 value={govFilter}
-                onChange={(e) => setGovFilter(e.target.value)}
+                onChange={(e) => { setGovFilter(e.target.value); setDistrictFilter(""); }}
                 className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
               >
-                <option value="">جميع المحافظات</option>
-                {IRAQ_LOCATIONS.map((loc) => (
-                  <option key={loc.governorate} value={loc.governorate}>
-                    {loc.governorate}
+                <option value="">كل المحافظات</option>
+                {IRAQ_LOCATIONS.map((g) => (
+                  <option key={g.governorate} value={g.governorate}>
+                    {g.governorate}
                   </option>
                 ))}
               </select>
             </div>
+
+            {govFilter && (
+              <div className="md:w-1/5 min-w-[150px]">
+                <select
+                  value={districtFilter}
+                  onChange={(e) => setDistrictFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
+                >
+                  <option value="">كل الأقضية</option>
+                  {selectedGov?.districts.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {mainTab === 'materials' && (
+              <div className="flex items-center min-w-[150px]">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-950 border border-white/10 rounded-xl py-3 px-4 w-full h-full">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${deliveryFilter ? 'bg-[#F27D26] border-[#F27D26]' : 'border-white/20 bg-slate-900'}`}>
+                    {deliveryFilter && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={deliveryFilter} onChange={e => setDeliveryFilter(e.target.checked)} />
+                  <span className="text-sm text-white">تتوفر خدمة توصيل</span>
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -240,7 +233,7 @@ export default function ServiceProvidersList({
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-[#F27D26]" />
-            مقدمي الخدمات ({filteredProviders.length})
+            {mainTab === 'services' ? 'مقدمي الخدمات' : 'موردي المواد الإنشائية'} ({filteredProviders.length})
           </h2>
           <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-sm font-bold text-[#F27D26] hover:underline flex items-center gap-1">
             <Filter className="h-4 w-4" /> ترتيب حسب
@@ -288,6 +281,13 @@ export default function ServiceProvidersList({
                   <p className="text-xs text-[#F27D26] font-medium mb-3">
                     {provider.category}
                   </p>
+                  
+                  {mainTab === 'materials' && provider.hasDelivery && (
+                    <div className="mb-3 flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 w-fit px-2 py-1 rounded-md">
+                      <CheckCircle className="h-3 w-3" />
+                      تتوفر خدمة التوصيل
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
                     <div className="flex items-center gap-1">
@@ -302,14 +302,14 @@ export default function ServiceProvidersList({
                       {provider.governorate}, {provider.city}
                     </div>
                   </div>
-
+                  
                   <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
                     {provider.description}
                   </p>
-
+                  
                   <div className="pt-4 border-t border-white/5 flex justify-between items-center">
                     <span className="text-xs text-slate-500 font-mono">
-                      {provider.yearsOfExperience} سنوات خبرة
+                      {mainTab === 'services' ? `${provider.yearsOfExperience} سنوات خبرة` : `${provider.clientCount} عميل`}
                     </span>
                     <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
                       عرض التفاصيل
@@ -379,6 +379,10 @@ export default function ServiceProvidersList({
             </div>
           </div>
         </div>
+      )}
+
+      {showMaterialsModal && (
+        <MaterialsProviderForm onClose={() => setShowMaterialsModal(false)} />
       )}
     </div>
   );

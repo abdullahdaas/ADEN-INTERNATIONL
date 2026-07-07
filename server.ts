@@ -16,6 +16,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '3008';
 
 // Removed top level vite import
 import { db, firestore } from './src/data/db';
+import { deleteFileFromSupabase } from './src/data/supabaseStorage';
 
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog } from './src/types';
 
@@ -39,6 +40,15 @@ app.use(cors({ origin: true, credentials: true })); // Configure CORS
 app.use(express.json({ limit: '50mb' }));
 
 import xss from 'xss';
+
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 
 
 // File Upload Security
@@ -702,6 +712,12 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
       ...updateData,
       updatedAt: new Date().toISOString()
     };
+    const newImages = req.body.images || [];
+    const oldImages = p.images || [];
+    const removedImages = oldImages.filter(img => !newImages.includes(img));
+    for (const url of removedImages) {
+      await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete image', e));
+    }
     await db.properties.update(p.id!, updated);
     
     if (req.body.isApproved === true && !p.isApproved) {
@@ -756,46 +772,70 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
 
 app.delete('/api/properties/:id', requireAuth, async (req, res) => {
   try {
+    const propertyId = req.params.id;
+    const isHard = req.query.hard === 'true';
+    console.log(`
+[DELETE OPERATION STARTED] - Property ID: ${propertyId} | Hard Delete: ${isHard}`);
+    console.log(`[AUTH] - User: ${req.headers['x-user-id'] || 'None'} | Token Admin: ${(req as any).user ? (req as any).user.role : 'No'}`);
 
-  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
-  const userId = req.headers['x-user-id'] as string;
-  const p = await db.properties.getById(req.params.id);
-  
-  if (p) {
-    const isOwner = userId && p.ownerEmailOrPhone && p.ownerEmailOrPhone.toLowerCase() === userId.toLowerCase();
+    const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
+    const userId = req.headers['x-user-id'] as string;
+    const p = await db.properties.getById(propertyId);
     
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ success: false, message: 'Unauthorized to delete this property' });
-    }
-
-    if (req.query.hard === 'true') { await db.properties.remove(p.id!); } else { await db.properties.update(p.id!, { pendingDeletion: true, isApproved: false, status: 'مرفوض' }); }
-    if (isAdmin && !isOwner) {
-        if (p.ownerEmailOrPhone) {
-            await db.notifications.add({
-                id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
-                userId: p.ownerEmailOrPhone,
-                title: 'تم رفض/حذف عقارك',
-                message: `تم حذف عقارك "${p.title}" من قبل الإدارة.`,
-                isRead: false,
-                timestamp: new Date().toISOString()
-            });
-        }
-    }
-    
-    if (p.agentId) {
-      const agent = await db.agents.getById(p.agentId);
-      if (agent && agent.propertyCount > 0) {
-        await db.agents.update(agent.id!, { propertyCount: agent.propertyCount - 1 });
+    if (p) {
+      console.log(`[DB FETCH] - Property found: ${p.title} (Status: ${p.status})`);
+      const isOwner = userId && p.ownerEmailOrPhone && p.ownerEmailOrPhone.toLowerCase() === userId.toLowerCase();
+      
+      if (!isAdmin && !isOwner) {
+        console.log(`[REJECTED] - Unauthorized to delete property`);
+        return res.status(403).json({ success: false, message: 'Unauthorized to delete this property' });
       }
-    }
 
-    res.json({ success: true, message: 'Property deleted' });
-  } else {
-    res.status(404).json({ error: 'Property not found' });
-  }
-  } catch (error) {
-    console.error("DELETE ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+      if (isHard) {
+        console.log(`[EXECUTION] - Hard deleting property from database...`);
+        await db.properties.remove(p.id!);
+        if (p.images && p.images.length > 0) {
+          for (const url of p.images) {
+            await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete image', e));
+          }
+        }
+        console.log(`[SUCCESS] - Property hard deleted successfully. Rows affected: 1`);
+      } else {
+        console.log(`[EXECUTION] - Soft deleting property (Updating status to 'مرفوض' and pendingDeletion to true)...`);
+        await db.properties.update(p.id!, { pendingDeletion: true, isApproved: false, status: 'مرفوض' });
+        console.log(`[SUCCESS] - Property soft deleted successfully. Rows affected: 1`);
+      }
+
+      if (isAdmin && !isOwner && p.ownerEmailOrPhone) {
+        await db.notifications.add({
+          id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
+          userId: p.ownerEmailOrPhone,
+          title: 'تم رفض/حذف عقارك',
+          message: `تم حذف عقارك "${p.title}" من قبل الإدارة.`,
+          isRead: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      if (p.agentId) {
+        const agent = await db.agents.getById(p.agentId);
+        if (agent && agent.propertyCount > 0) {
+          await db.agents.update(agent.id!, { propertyCount: agent.propertyCount - 1 });
+        }
+      }
+      
+      console.log(`[COMPLETED] - Returning success response.
+`);
+      res.json({ success: true, message: 'Property deleted', deletedId: p.id, hard: isHard });
+    } else {
+      console.log(`[FAILED] - Property not found
+`);
+      res.status(404).json({ success: false, message: 'Property not found' });
+    }
+  } catch (err: any) {
+    console.error(`[ERROR] - ${err.message}
+`);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -1326,15 +1366,22 @@ app.get('/api/stats', async (req, res) => {
     }
   });
 
-  const governorateStats = Object.entries(govPriceMap).map(([gov, data]) => ({
-    governorate: gov,
-    avgSalePrice: data.countSale > 0 ? Math.round(data.totalSale / data.countSale) : 0,
-    avgRentPrice: data.countRent > 0 ? Math.round(data.totalRent / data.countRent) : 0,
-    totalSold: allDeals.filter(d => d.governorate === gov && d.type === 'بيع').length,
-    totalRented: allDeals.filter(d => d.governorate === gov && d.type === 'تأجير').length,
-    avgDaysToSell: 10,
-    avgDaysToRent: 4
-  }));
+  const governorateStats = Object.entries(govPriceMap).map(([gov, data]) => {
+    const govSoldDeals = allDeals.filter(d => d.governorate === gov && d.type === 'بيع');
+    const govRentDeals = allDeals.filter(d => d.governorate === gov && d.type === 'تأجير');
+    const avgSell = govSoldDeals.length > 0 ? Math.round(govSoldDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / govSoldDeals.length) : 0;
+    const avgRent = govRentDeals.length > 0 ? Math.round(govRentDeals.reduce((acc, d) => acc + d.daysToComplete, 0) / govRentDeals.length) : 0;
+    
+    return {
+      governorate: gov,
+      avgSalePrice: data.countSale > 0 ? Math.round(data.totalSale / data.countSale) : 0,
+      avgRentPrice: data.countRent > 0 ? Math.round(data.totalRent / data.countRent) : 0,
+      totalSold: govSoldDeals.length,
+      totalRented: govRentDeals.length,
+      avgDaysToSell: avgSell,
+      avgDaysToRent: avgRent
+    };
+  });
 
   res.json({
     activeCount: activeProperties.length,

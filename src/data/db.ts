@@ -1,10 +1,13 @@
 import { initializeApp } from 'firebase/app';
+
 import { getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog, ElectronicAgreement } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+
 
 export class FirestoreCollection<T extends { id?: string }> {
   constructor(public name: string) {}

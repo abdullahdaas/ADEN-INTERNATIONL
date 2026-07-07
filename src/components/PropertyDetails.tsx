@@ -141,25 +141,28 @@ export default function PropertyDetails({
   // Navigation google maps link
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${property.coordinates.lat},${property.coordinates.lng}`;
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+    const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewerName || !comment) return;
-
-    const newRev: Review = {
-      id: 'rev-' + Date.now(),
+    const newRev = {
+      propertyId: property.id,
       agentId: property.agentId,
       reviewerName,
       rating,
-      comment,
-      createdAt: new Date().toISOString(),
-      isApproved: true // Auto approved in mock
+      comment
     };
-
-    setReviews([...reviews, newRev]);
-    setReviewerName('');
-    setComment('');
-    setReviewSubmitted(true);
-    setTimeout(() => setReviewSubmitted(false), 4000);
+    try {
+      await submitReview(newRev);
+      setReviews([...reviews, { ...newRev, id: 'temp-' + Date.now(), createdAt: new Date().toISOString(), isApproved: false }]);
+      setReviewerName('');
+      setComment('');
+      setReviewSubmitted(true);
+      setTimeout(() => setReviewSubmitted(false), 4000);
+      alert('تم إرسال تقييمك للمراجعة. شكراً لك.');
+    } catch(e) {
+      console.error(e);
+      alert('حدث خطأ أثناء الإرسال');
+    }
   };
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {

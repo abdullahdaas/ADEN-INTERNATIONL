@@ -241,31 +241,6 @@ export default function ServiceProviderProfile({
                   </button>
                 </div>
 
-                {/* Mock Review */}
-                <div className="bg-slate-900/20 p-6 rounded-2xl border border-white/5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-slate-700"></div>
-                      <div>
-                        <p className="font-bold text-white text-sm">
-                          محمد جاسم
-                        </p>
-                        <p className="text-xs text-slate-500">قبل 3 أيام</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star
-                          key={i}
-                          className="h-3 w-3 text-amber-400 fill-amber-400"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    خدمة ممتازة وسرعة في الإنجاز. أنصح بالتعامل معهم بشدة.
-                  </p>
-                </div>
               </div>
             )}
           </div>

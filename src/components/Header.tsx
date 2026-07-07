@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Home, Search, Moon, Sun, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Menu, X, Bell, BellOff } from 'lucide-react';
-import { Property } from '../types';
+import React, { useState, useEffect } from 'react';
+import { IraqMapIcon } from "./IraqMapIcon";
+import { Home, Search, Moon, Sun, Heart, MessageSquare, ShieldAlert, GitCompare, PlusCircle, LogIn, LogOut, Globe, User, Briefcase, FileCheck, FileSignature, Bell } from 'lucide-react';
+import { Property, UserNotification } from '../types';
 import { translations } from '../utils/translations';
 import { fetchNotifications, markNotificationRead } from '../utils/api';
-import { UserNotification } from '../types';
 import AdenLogo from './AdenLogo';
 
 interface HeaderProps {
@@ -42,11 +42,29 @@ export default function Header({
   onLogout
 }: HeaderProps) {
   const t = translations[lang];
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [showScrollHint, setShowScrollHint] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    
+    // Hide scroll hint after 3 seconds
+    const timer = setTimeout(() => {
+      setShowScrollHint(false);
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (user) {
       fetchNotifications().then(n => setNotifications(n)).catch(() => {});
       const interval = setInterval(() => {
@@ -58,17 +76,11 @@ export default function Header({
 
   const unreadNotifs = notifications.filter(n => !n.isRead).length;
 
-  const handleReadNotification = async (id: string) => {
-    await markNotificationRead(id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
-
-
   const navItems = [
     { id: 'home', label: t.home, icon: Home },
     { id: 'listings', label: t.listings, icon: Search },
     { id: 'service-providers', label: lang === 'ar' ? 'مزودي الخدمات' : lang === 'en' ? 'Service Providers' : 'پێشکەشکارانی خزمەتگوزاری', icon: Briefcase },
-    { id: 'map-search', label: lang === 'ar' ? 'الخريطة' : 'Map', icon: Search },
+    { id: 'map-search', label: lang === 'ar' ? 'الخريطة' : 'Map', icon: IraqMapIcon },
     { id: 'verify-agreement', label: lang === 'ar' ? 'تحقق من مكاتبة' : lang === 'en' ? 'Verify Agreement' : 'پشکنینی بەڵگەنامە', icon: FileCheck },
     ...(user?.role === 'citizen' ? [
       { id: 'my-properties', label: lang === 'ar' ? 'عقاراتي' : lang === 'en' ? 'My Properties' : 'خانووبەرەکانم', icon: User },
@@ -79,311 +91,171 @@ export default function Header({
   ];
 
   const toggleLanguage = () => {
-    if (lang === 'ar') {
-      setLang('en');
-    } else if (lang === 'en') {
-      setLang('ku');
-    } else {
-      setLang('ar');
-    }
+    if (lang === 'ar') setLang('en');
+    else if (lang === 'en') setLang('ku');
+    else setLang('ar');
   };
 
   return (
-    <header id="app-header" className="sticky top-0 z-50 w-full border-b border-white/5 bg-royal-dark/95 backdrop-blur-md">
-      <div className="mx-auto flex flex-wrap max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+    <header 
+      id="app-header" 
+      className={`sticky top-0 z-50 w-full border-b border-white/5 transition-all duration-300 ${
+        isScrolled ? 'bg-black/40 backdrop-blur-xl shadow-lg shadow-black/20' : 'bg-black/20 backdrop-blur-md'
+      }`}
+    >
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         
-        {/* Brand Logo & Name */}
+        {/* Brand Logo Only */}
         <div 
           className="flex cursor-pointer items-center gap-3 select-none"
           onClick={() => setView('home')}
           onDoubleClick={onLogoDoubleClick}
           title={t.doubleClickAdminTip}
         >
-          {/* Beautiful calligraphic animated AdenLogo */}
-          <div className="animate-float hover:scale-105 transition-transform duration-300">
+          <div className="animate-float">
             <AdenLogo size={42} />
           </div>
-          
-          <div className="flex flex-col">
-            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 font-sans tracking-tight">
-              {t.sloganTitle.split(' ')[0]} {/* "عدن" */}
-            </span>
-            <span className="text-[10px] font-bold text-[#F27D26] tracking-widest font-sans">
-              {t.sloganTitle.split(' ').slice(1).join(' ')} {/* "للوساطة العقارية" */}
-            </span>
-          </div>
         </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-2 py-1.5 border border-white/5 shadow-inner">
-          {navItems?.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                id={`nav-${item.id}`}
-                onClick={() => setView(item.id as any)}
-                className={`relative flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-300 ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] text-white shadow-lg shadow-[#F27D26]/20' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : ''}`} />
-                <span>{item.label}</span>
-                {item.badge !== undefined && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#F27D26] text-[9px] font-black shadow-sm">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          
-          {/* Admin link helper if already logged in */}
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => setView('admin')}
-              className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-300 ${
-                currentView === 'admin' ? 'bg-[#F27D26]/10 text-[#F27D26]' : 'text-red-400 hover:bg-red-500/5'
-              }`}
-            >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              <span>{t.admin}</span>
-            </button>
-          )}
-        </nav>
-
-        {/* Action Controls & Language Switcher */}
-        <div className="flex items-center gap-2">
-          
-          {/* Theme Toggle Button */}
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center justify-center rounded-lg border border-white/5 bg-white/5 w-9 h-9 text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-            title={lang === 'ar' ? 'تغيير المظهر' : 'Toggle Theme'}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-400" />}
-          </button>
-    
-          {/* Language Switch Button */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-            title={lang === 'ar' ? 'Switch Language' : lang === 'en' ? 'گۆڕینی زمان' : 'Change Language'}
-          >
-            <Globe className="h-3.5 w-3.5 text-[#F27D26]" />
-            <span className="inline">{lang === 'ar' ? 'اللغة' : lang === 'en' ? 'Language' : 'زمان'}</span>
-          </button>
-
-          {/* Add Property Button */}
-          <button
-            onClick={onOpenAddProperty}
-            className="hidden sm:flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-[#F27D26]/10 hover:shadow-[#F27D26]/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>{t.addPropButton}</span>
-          </button>
-
-          {/* Notifications Button */}
-          {user && (
-            <div className="relative">
-              <button
-                id="btn-notifications"
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 transition-all hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20"
-                title="الإشعارات"
-              >
-                <Bell className={`h-4 w-4 ${unreadNotifs > 0 ? 'fill-[#F27D26] text-[#F27D26] animate-pulse' : ''}`} />
-                {unreadNotifs > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                    {unreadNotifs}
-                  </span>
-                )}
-              </button>
-              {showNotifications && (
-                <div className="absolute top-12 left-0 sm:left-auto sm:-right-2 w-72 max-h-96 overflow-y-auto bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 p-2 text-right" dir="rtl">
-                  <div className="flex justify-between items-center px-2 py-1 mb-2 border-b border-white/10 pb-2">
-                    <span className="text-white font-bold text-sm">الإشعارات</span>
-                    <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
-                  </div>
-                  {notifications.length === 0 ? (
-                    <div className="text-slate-400 text-xs text-center py-4 flex flex-col items-center gap-2">
-                      <BellOff className="h-6 w-6 opacity-20" />
-                      لا توجد إشعارات حالياً
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {notifications.map(n => (
-                        <div 
-                          key={n.id} 
-                          onClick={() => handleReadNotification(n.id)}
-                          className={`p-3 rounded-lg text-xs transition-colors cursor-pointer ${n.isRead ? 'bg-white/5 opacity-60' : 'bg-[#F27D26]/10 border border-[#F27D26]/20 hover:bg-[#F27D26]/20'}`}
-                        >
-                          <div className={`font-bold ${n.isRead ? 'text-slate-300' : 'text-[#F27D26]'}`}>{n.title}</div>
-                          <div className="text-slate-400 mt-1">{n.message}</div>
-                          <div className="text-[10px] text-slate-500 mt-2">{new Date(n.timestamp).toLocaleString('ar-IQ')}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Favorites Button */}
-          <button
-            id="btn-favorites"
-            onClick={onOpenFavorites}
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 transition-all hover:bg-[#F27D26]/10 hover:text-[#F27D26] hover:border-[#F27D26]/20"
-            title="المفضلة"
-          >
-            <Heart className={`h-4 w-4 ${favorites.length > 0 ? 'fill-[#F27D26] text-[#F27D26]' : ''}`} />
-            {favorites.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#ff8a3d] text-[9px] font-bold text-white">
-                {favorites.length}
-              </span>
-            )}
-          </button>
-
-          {/* User Status / Login Button */}
-          {user ? (
-            <div className="relative group flex items-center gap-2">
-              <button
-                onClick={onLogout}
-                className="flex items-center gap-1.5 rounded-lg border border-red-500/10 bg-red-500/5 hover:bg-red-500/15 px-3 py-2 text-xs font-bold text-red-400 transition-all"
-                title={t.logout}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">{t.logout}</span>
-              </button>
-              
-              <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-2 text-xs text-slate-300">
-                <User className="h-3.5 w-3.5 text-[#F27D26]" />
-                <span className="max-w-[100px] truncate">{user.name?.split(' ')[0] || ''}</span>
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${user.role === 'admin' ? 'bg-red-500' : 'bg-green-500'}`}></span>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-white transition-all"
-            >
-              <LogIn className="h-3.5 w-3.5 text-[#F27D26]" />
-              <span className="inline">{t.loginButton}</span>
-            </button>
-          )}
-
-          {/* Admin Indicator */}
-          {user?.role === 'admin' && currentView === 'admin' && (
-            <div className="hidden lg:flex items-center gap-1 space-x-reverse rounded-full bg-red-500/10 px-3 py-1 border border-red-500/20 text-[10px] text-red-400">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              <span>{t.admin}</span>
-            </div>
-          )}
-
-          {/* Mobile Menu Button */}
-          <button
-            id="mobile-menu-toggle"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 lg:hidden"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-
-      </div>
-
-      {/* Mobile Dropdown Menu */}
-      {mobileMenuOpen && (
-        <div id="mobile-nav-menu" className="border-t border-white/5 bg-royal-dark/95 backdrop-blur-lg lg:hidden">
-          <div className="space-y-2 px-4 py-4">
+        {/* Original Navigation Container */}
+        <div className="relative flex-1 min-w-0 flex items-center justify-end">
+          <div className="flex w-full items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide [mask-image:linear-gradient(to_right,black_90%,transparent)] pr-8">
+            
+            {/* Nav Items */}
             {navItems?.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setView(item.id as any);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all ${
+                  id={`nav-${item.id}`}
+                  onClick={() => setView(item.id as any)}
+                  title={item.label}
+                  className={`relative flex flex-shrink-0 items-center justify-center rounded-full p-2 sm:px-4 sm:py-2 transition-all ${
                     isActive 
-                      ? 'bg-[#F27D26]/15 text-[#F27D26]' 
-                      : 'text-slate-300 hover:bg-white/5'
+                      ? 'bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] text-white shadow-md' 
+                      : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </div>
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-white' : ''}`} />
+                  <span className="hidden lg:inline ml-2 text-sm font-medium">{item.label}</span>
                   {item.badge !== undefined && (
-                    <span className="rounded-full bg-[#F27D26] px-2.5 py-0.5 text-[10px] font-bold text-[#ffffff]">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#F27D26] text-[10px] font-black shadow-sm">
                       {item.badge}
                     </span>
                   )}
                 </button>
               );
             })}
-
-            {/* Mobile-Only Action: Add Property */}
-            <button
-              onClick={() => {
-                onOpenAddProperty();
-                setMobileMenuOpen(false);
-              }}
-              className="flex w-full items-center gap-3 rounded-lg bg-gradient-to-r from-[#F27D26] to-[#ff8a3d] px-4 py-3 text-sm font-bold text-white shadow-md"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>{t.addProperty}</span>
-            </button>
             
-            {/* Mobile Admin link */}
             {user?.role === 'admin' && (
               <button
-                onClick={() => {
-                  setView('admin');
-                  setMobileMenuOpen(false);
-                }}
-                className={`flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${
-                  currentView === 'admin' ? 'bg-[#F27D26]/15 text-[#F27D26]' : 'text-red-400 hover:bg-white/5'
+                onClick={() => setView('admin')}
+                title={t.admin}
+                className={`relative flex flex-shrink-0 items-center justify-center rounded-full p-2 sm:px-4 sm:py-2 transition-all ${
+                  currentView === 'admin' ? 'bg-[#F27D26]/20 text-[#F27D26]' : 'text-red-400 hover:text-red-300 hover:bg-white/10'
                 }`}
               >
-                <ShieldAlert className="h-4 w-4" />
-                <span>{t.admin}</span>
+                <ShieldAlert className="h-5 w-5" />
+                <span className="hidden lg:inline ml-2 text-sm font-medium">{t.admin}</span>
               </button>
             )}
 
-            {/* Mobile Login / Logout Button */}
+            {/* User Profile Summary */}
+            {user && (
+              <div className="hidden sm:flex flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-white">
+                 <User className="h-4 w-4 text-[#F27D26] mr-2" />
+                 <span className="text-sm font-medium">{user.name || ''}</span>
+              </div>
+            )}
+
+            <div className="h-6 w-px bg-white/20 mx-1 flex-shrink-0"></div>
+
+            <button
+              onClick={toggleLanguage}
+              className="flex flex-shrink-0 items-center justify-center rounded-full p-2 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+              title={lang === 'ar' ? 'Switch Language' : lang === 'en' ? 'گۆڕینی زمان' : 'Change Language'}
+            >
+              <Globe className="h-5 w-5 text-[#F27D26]" />
+            </button>
+            
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="flex flex-shrink-0 items-center justify-center rounded-full p-2 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+              title={lang === 'ar' ? 'تغيير المظهر' : 'Toggle Theme'}
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5 text-slate-300" />}
+            </button>
+
+            {user && (
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="relative flex flex-shrink-0 items-center justify-center rounded-full p-2 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+                title="الإشعارات"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadNotifs}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={onOpenFavorites}
+              className="relative flex flex-shrink-0 items-center justify-center rounded-full p-2 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+              title="المفضلة"
+            >
+              <Heart className="h-5 w-5" />
+              {favorites.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#ff8a3d] text-[10px] font-bold text-white">
+                  {favorites.length}
+                </span>
+              )}
+            </button>
+
+            <div className="h-6 w-px bg-white/20 mx-1 flex-shrink-0"></div>
+
+            <button
+              onClick={onOpenAddProperty}
+              className="flex flex-shrink-0 items-center justify-center rounded-full bg-[#F27D26] hover:bg-[#ff8a3d] text-white p-2 sm:px-4 sm:py-2 transition-all shadow-lg"
+              title={t.addPropButton}
+            >
+              <PlusCircle className="h-5 w-5" />
+              <span className="hidden lg:inline ml-2 text-sm font-bold">{t.addPropButton}</span>
+            </button>
+            
             {!user ? (
               <button
-                onClick={() => {
-                  onOpenLogin();
-                  setMobileMenuOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5 border border-white/5 mt-2"
+                onClick={onOpenLogin}
+                className="flex flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/5 p-2 sm:px-4 sm:py-2 text-white hover:bg-white/10 transition-all"
+                title={t.loginButton}
               >
-                <LogIn className="h-4 w-4 text-[#F27D26]" />
-                <span>{t.loginButton}</span>
+                <LogIn className="h-5 w-5 text-[#F27D26]" />
+                <span className="hidden lg:inline ml-2 text-sm font-bold">{t.loginButton}</span>
               </button>
             ) : (
               <button
-                onClick={() => {
-                  onLogout();
-                  setMobileMenuOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-400 hover:bg-white/5 border border-white/5 mt-2"
+                onClick={onLogout}
+                className="flex flex-shrink-0 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 p-2 sm:px-4 sm:py-2 text-red-300 hover:bg-red-500/20 transition-all"
+                title={t.logout}
               >
-                <LogOut className="h-4 w-4 text-red-500" />
-                <span>{t.logout}</span>
+                <LogOut className="h-5 w-5" />
+                <span className="hidden lg:inline ml-2 text-sm font-bold">{t.logout}</span>
               </button>
             )}
+            
           </div>
+          {showScrollHint && (
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none pr-1 animate-pulse flex items-center justify-center">
+              <div className="bg-black/50 backdrop-blur-sm rounded-full p-1 shadow-lg text-white">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </header>
   );
 }

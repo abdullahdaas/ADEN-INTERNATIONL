@@ -7,6 +7,7 @@ import {
 import { Property, PaymentProof, CitizenProfile } from '../types';
 import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments } from '../utils/api';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
+import { batchUploadToSupabase } from '../data/supabaseStorage';
 import { SmartLocationPicker } from './SmartLocationPicker';
 
 interface CitizenPropertiesProps {
@@ -57,6 +58,58 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
   const [editHasSolarPower, setEditHasSolarPower] = useState(false);
   const [editHasPool, setEditHasPool] = useState(false);
   const [editImages, setEditImages] = useState<string[]>([]);
+  const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
+  
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      console.log("[CitizenProperties compressImage] Starting compression for:", file.name, "Size:", file.size);
+      const startTime = Date.now();
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 1200;
+          
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' });
+              console.log(`[CitizenProperties compressImage] Completed in ${Date.now() - startTime}ms. New size: ${compressedFile.size}`);
+              resolve(compressedFile);
+            } else reject(new Error('Canvas to Blob failed'));
+          }, 'image/webp', 0.85);
+        };
+        img.onerror = (error) => {
+          console.error("[CitizenProperties compressImage] Image load error", error);
+          reject(error);
+        };
+      };
+      reader.onerror = (error) => {
+        console.error("[CitizenProperties compressImage] FileReader error", error);
+        reject(error);
+      };
+    });
+  };
+  
   const [editVideoUrl, setEditVideoUrl] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -199,14 +252,34 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
   };
 
   // Handle property image additions
-  const handlePropertyImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePropertyImageAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditImages(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
+      setIsUploadingEditImage(true);
+      console.log("[CitizenProperties handlePropertyImageAdd] Starting Supabase upload for", file.name);
+      const startTime = Date.now();
+      try {
+        const compressed = await compressImage(file);
+        const tempId = selectedEditProp?.id || 'temp';
+        
+        const urls = await batchUploadToSupabase(tempId, [compressed], (prog) => {
+           console.log(`[CitizenProperties handlePropertyImageAdd] Progress: ${prog}%`);
+        });
+        
+        if (urls && urls.length > 0) {
+          console.log(`[CitizenProperties handlePropertyImageAdd] Upload complete in ${Date.now() - startTime}ms. URL:`, urls[0]);
+          setEditImages(prev => [...prev, urls[0]]);
+        }
+      } catch (err: any) {
+        console.error("[CitizenProperties handlePropertyImageAdd] Failed to upload edit image", err);
+        let errorMsg = err.message || 'Unknown error';
+        if (errorMsg.includes('Invalid Compact JWS') || errorMsg.includes('JWSError')) {
+          errorMsg = 'مفتاح Supabase (Anon Key) مفقود أو غير صالح. يرجى إضافته في الإعدادات.';
+        }
+        alert('فشل الرفع: ' + errorMsg);
+      } finally {
+        setIsUploadingEditImage(false);
+      }
     }
   };
 

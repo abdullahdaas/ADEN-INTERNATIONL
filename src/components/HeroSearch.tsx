@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, SlidersHorizontal, MapPin, Building, Banknote } from 'lucide-react';
-import { IRAQ_LOCATIONS } from '../data/mockData';
+import { IRAQ_LOCATIONS } from '../data/iraqLocations';
 
 interface HeroSearchProps {
   onSearch: (filters: Record<string, any>) => void;
@@ -170,7 +170,7 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
         <button
           id="tab-search-sale"
           type="button"
-          onClick={() => { setStatus('للبيع'); onSearch({ ...initialFilters, status: 'للبيع' }); }}
+          onClick={() => setStatus('للبيع')}
           className={`px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${
             status === 'للبيع' 
               ? 'bg-gold-prestige text-white shadow-lg shadow-gold-prestige/20' 
@@ -182,7 +182,7 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
         <button
           id="tab-search-rent"
           type="button"
-          onClick={() => { setStatus('للإيجار'); onSearch({ ...initialFilters, status: 'للإيجار' }); }}
+          onClick={() => setStatus('للإيجار')}
           className={`px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${
             status === 'للإيجار' 
               ? 'bg-gold-prestige text-white shadow-lg shadow-gold-prestige/20' 

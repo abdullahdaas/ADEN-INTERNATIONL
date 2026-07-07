@@ -65,7 +65,7 @@ import {
   updateComplaint,
 } from "../utils/api";
 import { formatPrice } from "./PropertyCard";
-import { IRAQ_LOCATIONS } from "../data/mockData";
+import { IRAQ_LOCATIONS } from "../data/iraqLocations";
 import { AdminMapEditor } from "./AdminMapEditor";
 import { AdminGISPanel } from "./AdminGISPanel";
 import { MapPin } from "lucide-react";
@@ -426,6 +426,19 @@ export default function AdminPortal({
     } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
   };
 
+  const handleMarkAsSoldOrRented = async (p: Property, newStatus: 'تم البيع' | 'تم التأجير') => {
+    if (!window.confirm(`هل أنت متأكد من تحويل حالة العقار إلى "${newStatus}"؟ سيتم إضافة الصفقة إلى سجل الصفقات المكتملة والإحصائيات.`)) return;
+    try {
+      await updateProperty(p.id, { status: newStatus });
+      loadAdminData();
+      onRefreshProperties();
+      if (selectedInspectProperty?.id === p.id) {
+        setSelectedInspectProperty({ ...p, status: newStatus });
+      }
+      alert('تم تحديث حالة العقار بنجاح وتوثيق الصفقة.');
+    } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
+  };
+
   const handleSaveEditProperty = async () => {
     try {
       await updateProperty(editPropForm.id, editPropForm);
@@ -436,7 +449,7 @@ export default function AdminPortal({
     } catch (e: any) { console.error(e); alert(e.message || "حدث خطأ غير متوقع"); }
   };
 
-  const handleDeleteProperty = async (id: string, hard: boolean = false) => {
+  const handleDeleteProperty = async (id: string, hard: boolean = true) => {
     if (!window.confirm("هل أنت متأكد من رغبتك في حذف هذا العقار نهائياً؟")) return;
     try {
       await deleteProperty(id, hard);
@@ -2218,6 +2231,8 @@ export default function AdminPortal({
                 إحصائيات المنصة، الزيارات ومؤشرات الأداء
               </p>
             </div>
+            
+            {/* ... */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="p-4 rounded-xl border border-white/5 bg-slate-950/30 text-center">
                 <span className="text-xs text-slate-400 block">
@@ -2259,51 +2274,72 @@ export default function AdminPortal({
                   أكثر المحافظات نشاطاً
                 </h3>
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">بغداد</span>
-                    <span className="font-mono text-emerald-400">45%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">أربيل</span>
-                    <span className="font-mono text-emerald-400">25%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">البصرة</span>
-                    <span className="font-mono text-emerald-400">15%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">السليمانية</span>
-                    <span className="font-mono text-emerald-400">10%</span>
-                  </div>
+                  {(() => {
+                    const govCounts: Record<string, number> = {};
+                    let total = 0;
+                    properties.forEach(p => {
+                      govCounts[p.governorate] = (govCounts[p.governorate] || 0) + 1;
+                      total++;
+                    });
+                    deals.forEach(d => {
+                      govCounts[d.governorate] = (govCounts[d.governorate] || 0) + 1;
+                      total++;
+                    });
+                    const sortedGovs = Object.entries(govCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                    
+                    if (sortedGovs.length === 0) {
+                      return <div className="text-slate-500 py-4 text-center">لا توجد بيانات كافية لعرض المحافظات النشطة.</div>;
+                    }
+
+                    return sortedGovs.map(([gov, count], idx) => {
+                      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div key={idx} className="flex justify-between items-center p-2 hover:bg-white/5 rounded transition-colors">
+                          <span className="text-slate-300 font-bold">{gov}</span>
+                          <span className="font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">{percent}%</span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
+
               <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6">
                 <h3 className="text-sm font-bold text-white mb-4 border-b border-white/5 pb-2">
-                  تقارير الأداء
+                  تقارير الأداء الحقيقية
                 </h3>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">
-                      متوسط مدة بقاء المستخدم
-                    </span>
-                    <span className="font-mono text-[#F27D26]">4 دقائق</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">
-                      معدل التحويل للإعلانات
-                    </span>
-                    <span className="font-mono text-[#F27D26]">12.5%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">نسبة نجاح المزادات</span>
-                    <span className="font-mono text-[#F27D26]">85%</span>
-                  </div>
+                <div className="space-y-3 text-xs">
+                  {(() => {
+                    const activeConversion = properties.length > 0 ? Math.min(100, Math.round((deals.length / properties.length) * 100)) : 0;
+                    const engagementRate = visits.length > 0 ? Math.min(100, Math.round(((offers.length + messages.length) / visits.length) * 100)) : 0;
+                    const activePropsPercent = properties.length > 0 ? Math.round((properties.filter(p => p.isApproved && !p.isSuspended).length / properties.length) * 100) : 0;
+
+                    return (
+                      <>
+                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                          <span className="text-slate-300">
+                            معدل تفاعل الزوار الحقيقي
+                          </span>
+                          <span className="font-mono text-[#F27D26] font-bold">{engagementRate}%</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                          <span className="text-slate-300">
+                            معدل التحويل (صفقات منجزة للكل)
+                          </span>
+                          <span className="font-mono text-emerald-400 font-bold">{activeConversion}%</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                          <span className="text-slate-300">نسبة العقارات المنشورة الفعالة</span>
+                          <span className="font-mono text-blue-400 font-bold">{activePropsPercent}%</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
           </div>
         )}
-
         {/* CMS VIEW */}
         {adminView === "cms" && (
           <div className="space-y-6 animate-fade-in">
@@ -3364,6 +3400,24 @@ export default function AdminPortal({
                   <Ban className="h-4 w-4" />
                   <span>{selectedInspectProperty.isSuspended ? 'إعادة التفعيل' : 'تعليق / إخفاء'}</span>
                 </button>
+                {(selectedInspectProperty.status === 'للبيع' || selectedInspectProperty.status === 'مميز') && (
+                  <button
+                    onClick={() => handleMarkAsSoldOrRented(selectedInspectProperty, 'تم البيع')}
+                    className="rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>تأكيد كعملية بيع منجزة</span>
+                  </button>
+                )}
+                {selectedInspectProperty.status === 'للإيجار' && (
+                  <button
+                    onClick={() => handleMarkAsSoldOrRented(selectedInspectProperty, 'تم التأجير')}
+                    className="rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white px-5 py-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>تأكيد كعملية تأجير منجزة</span>
+                  </button>
+                )}
                 {!selectedInspectProperty.isApproved && !selectedInspectProperty.isSuspended && (
                   <button
                     onClick={() => {

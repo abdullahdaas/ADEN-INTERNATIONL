@@ -107,7 +107,7 @@ html[data-theme='light'] {
 
 
 @media print {
-    body * {
+  body * {
     visibility: hidden;
   }
   #pdf-wrapper, #pdf-wrapper * {
@@ -121,15 +121,89 @@ html[data-theme='light'] {
   }
   #pdf-render-container {
     position: relative !important;
-    width: 210mm !important;
-    height: 297mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
     margin: 0 !important;
-    padding: 20mm !important;
+    padding: 0 !important;
     background: white !important;
     color: black !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   @page {
     size: A4;
-    margin: 0;
+    margin: 10mm;
   }
+}
+
+.header-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #F27D26 transparent;
+}
+.header-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.header-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.header-scroll::-webkit-scrollbar-thumb {
+  background: #F27D26;
+  border-radius: 4px;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Driver.js Custom Glass Theme */
+.driver-theme-glass {
+  background: rgba(10, 10, 10, 0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+.driver-theme-glass .driver-popover-title {
+  color: #F27D26 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+}
+.driver-theme-glass .driver-popover-description {
+  color: #f3f4f6 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+.driver-theme-glass .driver-popover-footer button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 0.5rem 1rem !important;
+  text-shadow: none !important;
+  font-family: var(--font-sans) !important;
+  transition: all 0.2s !important;
+}
+.driver-theme-glass .driver-popover-footer button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+.driver-theme-glass .driver-popover-footer .driver-popover-next-btn {
+  background: #F27D26 !important;
+  border-color: #F27D26 !important;
+}
+.driver-theme-glass .driver-popover-footer .driver-popover-next-btn:hover {
+  background: #ff8a3d !important;
+}
+.driver-theme-glass .driver-popover-close-btn {
+  color: #fff !important;
 }

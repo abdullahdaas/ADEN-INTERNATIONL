@@ -1,5 +1,7 @@
 import AdenLogo from "./components/AdenLogo";
 import React, { useState, useEffect } from "react";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 import { Mail,
   Building,
   MapPin,
@@ -55,6 +57,7 @@ import {
 } from "./utils/api";
 import { IRAQ_LOCATIONS } from "./data/iraqLocations";
 import { translations } from "./utils/translations";
+import { batchUploadToSupabase } from "./data/supabaseStorage";
 
 export default function App() {
   const [verifySerialNumber, setVerifySerialNumber] = useState("");
@@ -170,6 +173,8 @@ export default function App() {
   const [advertiserPhone, setAdvertiserPhone] = useState("");
   const [advertiserWhatsapp, setAdvertiserWhatsapp] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadError, setUploadError] = useState<string>('');
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [newAgentId, setNewAgentId] = useState("abdullah_daas");
 
@@ -205,6 +210,53 @@ export default function App() {
 
   const t = translations[lang];
 
+  // Guided Tour
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('aden-tour-completed');
+    if (!hasSeenTour) {
+      const tour = driver({
+        showProgress: true,
+        animate: true,
+        allowClose: false,
+        nextBtnText: lang === 'ar' ? 'التالي' : 'Next',
+        prevBtnText: lang === 'ar' ? 'السابق' : 'Prev',
+        doneBtnText: lang === 'ar' ? 'إنهاء' : 'Done',
+        popoverClass: 'driver-theme-glass',
+        steps: [
+          {
+            element: '#app-header',
+            popover: {
+              title: lang === 'ar' ? 'تصفح الخدمات' : 'Browse Services',
+              description: lang === 'ar' ? 'اسحب يمين ويسار هنا لتصفح جميع خدمات منصة عدن.' : 'Swipe left/right here to browse all services of Aden platform.',
+              side: 'bottom', align: 'center'
+            }
+          },
+          {
+            element: '#search-filter-section',
+            popover: {
+              title: lang === 'ar' ? 'البحث الذكي' : 'Smart Search',
+              description: lang === 'ar' ? 'اختر نوع العقار وابحث بسهولة عن مساحتك المثالية.' : 'Choose property type and easily search for your ideal space.',
+              side: 'bottom', align: 'center'
+            }
+          },
+          {
+            element: '#hero-banner',
+            popover: {
+              title: lang === 'ar' ? 'أهلاً بك في عدن' : 'Welcome to Aden',
+              description: lang === 'ar' ? 'هنا تجد الوجهة الأذكى لخياراتك العقارية.' : 'Here is the smartest destination for your real estate choices.',
+              side: 'bottom', align: 'center'
+            }
+          }
+        ],
+        onDestroyStarted: () => {
+          localStorage.setItem('aden-tour-completed', 'true');
+          tour.destroy();
+        }
+      });
+      setTimeout(() => tour.drive(), 800);
+    }
+  }, [lang]);
+
   // Fetch user specific data on user change
   useEffect(() => {
     if (user?.role === "citizen" && user.emailOrPhone) {
@@ -229,10 +281,22 @@ export default function App() {
     try {
       const props = await fetchProperties(listingsFilters);
       setProperties(props);
+      
+      // Sync dependent lists to ensure deleted items are removed
+      setFavorites(prev => {
+        const synced = prev.filter(f => props.some(p => p.id === f.id));
+        localStorage.setItem("aden-favorites", JSON.stringify(synced));
+        return synced;
+      });
+      
+      setCompareList(prev => {
+        const synced = prev.filter(c => props.some(p => p.id === c.id));
+        localStorage.setItem("aden-compare", JSON.stringify(synced));
+        return synced;
+      });
 
       const serverDeals = await fetchDeals();
       setDeals(serverDeals);
-
       const serverStats = await fetchStats();
       setStats(serverStats);
     } catch (err) {
@@ -521,28 +585,102 @@ export default function App() {
     setView("home");
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      console.log("[compressImage] Starting compression for:", file.name, "Size:", file.size);
+      const startTime = Date.now();
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 1200;
+          
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' });
+              console.log(`[compressImage] Completed in ${Date.now() - startTime}ms. New size: ${compressedFile.size}`);
+              resolve(compressedFile);
+            } else {
+              console.error("[compressImage] Canvas to Blob failed");
+              reject(new Error('Canvas to Blob failed'));
+            }
+          }, 'image/webp', 0.85);
+        };
+        img.onerror = (error) => {
+          console.error("[compressImage] Image load error", error);
+          reject(error);
+        };
+      };
+      reader.onerror = (error) => {
+        console.error("[compressImage] FileReader error", error);
+        reject(error);
+      };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     setIsUploadingImage(true);
-    const readPromises = Array.from(files)?.map((file: File) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
+    setUploadProgress(0);
+    setUploadError('');
+    
+    console.log("[handleImageUpload] Starting Supabase upload for", files.length, "files");
+    const startTimeTotal = Date.now();
+    
+    const tempPropertyId = 'temp_' + Date.now() + Math.random().toString(36).substring(2,7);
+    
+    try {
+      // First compress all files
+      const compressedFiles = await Promise.all(
+        Array.from(files).map((file: any) => compressImage(file as File))
+      );
 
-    Promise.all(readPromises)
-      .then((results) => {
-        setUploadedImages((prev) => [...prev, ...results]);
-        setIsUploadingImage(false);
-      })
-      .catch(() => {
-        setIsUploadingImage(false);
+      // Then batch upload to Supabase
+      const results = await batchUploadToSupabase(tempPropertyId, compressedFiles, (prog) => {
+        setUploadProgress(prog);
       });
+      
+      console.log(`[handleImageUpload] All promises resolved in ${Date.now() - startTimeTotal}ms. URLs:`, results);
+      
+      setUploadedImages((prev) => [...prev, ...results]);
+      setIsUploadingImage(false);
+      setUploadProgress(100);
+      
+      // Delay resetting progress to let the user see 100%
+      setTimeout(() => setUploadProgress(0), 1000);
+      
+    } catch (err: any) {
+      console.error("[handleImageUpload] Caught error:", err);
+      let errorMsg = err.message || 'Unknown error';
+      if (errorMsg.includes('Invalid Compact JWS') || errorMsg.includes('JWSError')) {
+        errorMsg = lang === 'ar' ? 'مفتاح Supabase (Anon Key) مفقود أو غير صالح. يرجى إضافته في الإعدادات.' : 'Supabase Anon Key is missing or invalid. Please add it in the environment settings.';
+      }
+      setUploadError(lang === 'ar' ? `فشل الرفع: ${errorMsg}` : `Upload failed: ${errorMsg}`);
+      setIsUploadingImage(false);
+      setUploadProgress(0);
+    }
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -662,6 +800,16 @@ export default function App() {
       dir={lang === "ar" || lang === "ku" ? "rtl" : "ltr"}
       className="min-h-screen w-full overflow-x-hidden bg-royal-dark text-slate-100 flex flex-col font-sans selection:bg-[#F27D26] selection:text-[#ffffff]"
     >
+      
+      {/* Global Hero Background Image (Persistent) */}
+      <div 
+        className="absolute top-0 left-0 w-full h-[800px] z-0 bg-cover bg-center pointer-events-none"
+        style={{ 
+          backgroundImage: `url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2075&q=80')`,
+        }}
+      />
+      <div className="absolute top-0 left-0 w-full h-[800px] z-0 bg-gradient-to-b from-[#050505]/60 via-[#050505]/80 to-[#050505] pointer-events-none" />
+
       {/* Dynamic Background Mesh Grid */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,125,38,0.07)_0%,transparent_60%)] opacity-80 pointer-events-none z-0"></div>
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(242,125,38,0.03)_0%,transparent_50%)] opacity-80 pointer-events-none z-0"></div>
@@ -713,25 +861,26 @@ export default function App() {
             {/* Elegant Hero Slogan with Hierarchical Search */}
             <div
               id="hero-banner"
-              className="relative rounded-3xl border border-white/5 bg-gradient-to-b from-[#F27D26]/10 to-transparent p-6 sm:p-12 text-center overflow-hidden"
+              className="relative rounded-3xl border border-white/5 p-6 sm:p-12 text-center overflow-hidden"
             >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 sm:w-96 sm:h-96 bg-[#F27D26]/5 rounded-full blur-3xl pointer-events-none"></div>
+              {/* Background Image with Gradient Overlay */}
+              
 
-              <div className="max-w-3xl mx-auto space-y-4 mb-8">
-                <span className="inline-flex flex-wrap items-center gap-2 rounded-full bg-[#F27D26]/10 px-3.5 py-1 text-xs font-bold text-[#F27D26] border border-[#F27D26]/25">
+              <div className="relative z-10 max-w-3xl mx-auto space-y-4 mb-8">
+                <span className="inline-flex flex-wrap items-center gap-2 rounded-full bg-[#F27D26]/20 px-3.5 py-1 text-xs font-bold text-[#F27D26] border border-[#F27D26]/30 backdrop-blur-md">
                   <Award className="h-3.5 w-3.5 animate-pulse" />
-                  <span>{t.platformFirst}</span>
+                  <span>الوجهة الأذكى لخياراتك العقارية</span>
                 </span>
-                <h1 className="text-3xl font-black text-white sm:text-5xl leading-normal">
+                <h1 className="text-3xl font-black text-white sm:text-5xl leading-normal drop-shadow-lg">
                   {t.sloganTitle}
                 </h1>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed sm:leading-loose max-w-2xl mx-auto font-sans">
-                  {t.sloganDesc}
+                <p className="text-sm sm:text-base text-slate-200 leading-relaxed sm:leading-loose max-w-2xl mx-auto font-sans drop-shadow-md">
+                  اكتشف مساحتك المثالية مع أدق أدوات البحث. نوفر لك تجربة سلسة وآمنة لبيع، شراء، واستثمار العقارات بمعايير استثنائية وشفافية تامة.
                 </p>
               </div>
 
               {/* Advanced Hierarchical Search Widget */}
-              <div className="max-w-4xl mx-auto">
+              <div id="search-filter-section" className="relative z-10 max-w-4xl mx-auto">
                 <HeroSearch
                   onSearch={handleSearchTrigger}
                   initialFilters={listingsFilters}
@@ -1393,41 +1542,33 @@ export default function App() {
       {/* FOOTER */}
       <footer
         id="app-footer"
-        className="border-t border-white/5 bg-royal-dark py-8 text-center text-slate-500 text-xs relative z-10 select-none"
+        className="border-t border-white/5 bg-royal-dark py-10 text-center relative z-10 select-none"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center justify-center gap-2">
-            <AdenLogo size={40} />
-            <span className="text-slate-600">|</span>
-            <span className="font-sans">
-              {lang === "ar"
-                ? "بوابة الوساطة العقارية المعتمدة الأرقى والأوسع انتشاراً في العراق"
-                : lang === "ku"
-                  ? "دەروازەی نێوەندگیری خانووبەرەی پەسەندکراو و بەربڵاوترین لە عێراق"
-                  : "Iraq's premier luxury certified real estate portal"}
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:items-end gap-1">
-            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 mb-2">
-              <a href="tel:07810060292" className="text-[#F27D26] hover:text-[#d96a1a] transition-colors flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                <span className="font-sans font-medium" dir="ltr">07810060292</span>
-              </a>
-              <a href="mailto:adenofice@gmail.com" className="text-[#F27D26] hover:text-[#d96a1a] transition-colors flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                <span className="font-sans font-medium">adenofice@gmail.com</span>
-              </a>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center justify-center gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            <AdenLogo size={48} />
+            <span className="hidden md:block h-12 w-px bg-white/10"></span>
+            <div className="flex flex-col items-center justify-center gap-2">
+              <img src="/tqm-logo.svg" alt="TQM Team Logo" className="h-10 w-auto object-contain drop-shadow-md" />
+              <p className="font-sans text-[10px] text-white/40 font-light tracking-wide uppercase">
+                {lang === "ar"
+                  ? "تم تطوير المنصة من قبل فريق tqm"
+                  : lang === "ku"
+                    ? "پلاتفۆرمەکە لەلایەن تیمی tqm پەرەپێدراوە"
+                    : "Developed by tqm team"}
+              </p>
             </div>
-            <p className="font-sans">
-              &copy; 2026 {t.logoTitle}.{" "}
-              {lang === "ar"
-                ? "جميع الحقوق محفوظة. إدارة وتوجيه المطور "
-                : lang === "ku"
-                  ? "هەموو مافەکان پارێزراون. بەڕێوەبردن و ئاراستەکردنی گەشەپێدەر "
-                  : "All Rights Reserved. Supervised by"}{" "}
-              <span className="text-[#F27D26] font-bold">عبدالله الدعاس</span>
-            </p>
+          </div>
+          
+          <div className="flex flex-wrap items-center justify-center gap-8 mt-2 pt-6 border-t border-white/5 w-full max-w-lg">
+            <a href="tel:07810060292" className="text-slate-400 hover:text-[#F27D26] transition-colors flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              <span className="font-sans font-medium text-sm" dir="ltr">07810060292</span>
+            </a>
+            <a href="mailto:adenofice@gmail.com" className="text-slate-400 hover:text-[#F27D26] transition-colors flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              <span className="font-sans font-medium text-sm">adenofice@gmail.com</span>
+            </a>
           </div>
         </div>
       </footer>
@@ -2020,6 +2161,21 @@ export default function App() {
                       <label className="block text-xs text-slate-400">
                         {t.uploadImagesLabel}
                       </label>
+                      {isUploadingImage && (
+                        <div className="mb-2 p-3 rounded-xl border border-[#F27D26]/20 bg-[#F27D26]/5 text-center">
+                          <span className="text-xs text-[#F27D26] font-bold block mb-1">
+                            {lang === 'ar' ? 'جاري ضغط ورفع الصور...' : 'Compressing & Uploading...'} {uploadProgress}%
+                          </span>
+                          <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#F27D26] transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                          </div>
+                        </div>
+                      )}
+                      {uploadError && (
+                        <div className="mb-2 p-2 rounded-xl border border-red-500/20 bg-red-500/10 text-xs text-red-400 text-center">
+                          {uploadError}
+                        </div>
+                      )}
                       <div className="relative group flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-white/10 bg-slate-950 hover:bg-slate-900/40 hover:border-[#F27D26]/40 transition-all cursor-pointer">
                         <input
                           type="file"

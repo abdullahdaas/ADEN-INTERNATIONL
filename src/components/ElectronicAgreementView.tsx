@@ -3,7 +3,6 @@ import { ArrowRight, Download, Printer, ShieldCheck, AlertTriangle, Loader2, X }
 import { ElectronicAgreement } from "../types";
 import AdenLogo from "./AdenLogo";
 import { QRCodeSVG } from "qrcode.react";
-import Barcode from "react-barcode";
 
 
 
@@ -157,23 +156,14 @@ export default function ElectronicAgreementView({ agreementId, lang, onBack }: P
               </div>
            </div>
            
-           {/* QR Code and Stamp for Web View */}
-           <div className="mt-8 flex flex-col md:flex-row justify-between items-center md:items-end border-t border-slate-200 pt-8 gap-8">
-              <div className="font-bold text-center">
-                 <p className="mb-6 text-slate-500">الختم الإلكتروني للمنصة</p>
-                 <div className="w-32 h-32 border-4 border-[#F27D26] rounded-full mx-auto flex items-center justify-center opacity-80 rotate-[-15deg]">
-                   <div className="text-center">
-                     <p className="text-[#F27D26] font-black text-xl">منصة عدن</p>
-                     <p className="text-[#F27D26] font-bold text-xs uppercase mt-1">وثيقة معتمدة</p>
-                   </div>
-                 </div>
-              </div>
+           {/* QR Code for Web View */}
+           <div className="mt-8 flex justify-center items-center border-t border-slate-200 pt-8">
               <div className="text-center font-bold">
-                 <p className="mb-2 text-sm text-slate-500">للتحقق من صحة الوثيقة</p>
+                 <p className="mb-2 text-sm text-slate-500">للتحقق من صحة الوثيقة امسح الرمز</p>
                  <div className="border border-slate-200 p-2 bg-white inline-block rounded-xl">
                    <QRCodeSVG 
                      value={`https://adenintl.site/verify/${agreement.serialNumber}`}
-                     size={100}
+                     size={80}
                      bgColor={"#ffffff"}
                      fgColor={"#000000"}
                      level={"H"}
@@ -190,59 +180,59 @@ export default function ElectronicAgreementView({ agreementId, lang, onBack }: P
       
 
       {/* Hidden PDF Render Container */}
-      <div id="pdf-wrapper" style={{ position: "fixed", left: "-20000px", top: 0 }}>
+      <div id="pdf-wrapper" className="hidden print:block fixed top-0 left-0 w-full h-full bg-white z-[9999]">
         <div 
           id="pdf-render-container" 
-          className="bg-white text-black relative" 
-          style={{ width: '210mm', height: '297mm', padding: '20mm', boxSizing: 'border-box', overflow: 'hidden' }} 
+          className="bg-white text-black relative mx-auto" 
+          style={{ width: '100%', boxSizing: 'border-box', overflow: 'hidden' }} 
           dir="rtl"
         >
           {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-8">
-            <div className="text-center w-1/3 pt-2">
-              <h2 className="font-bold text-xl mb-2">جمهورية العراق</h2>
-              <h3 className="font-bold text-lg mb-2">منصة عدن للوساطة العقارية</h3>
-              <p className="text-sm font-bold">قسم التوثيق الإلكتروني</p>
+          <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-4">
+            <div className="text-center w-1/3 pt-1">
+              <h2 className="font-bold text-lg mb-1">جمهورية العراق</h2>
+              <h3 className="font-bold text-base mb-1">منصة عدن للوساطة العقارية</h3>
+              <p className="text-xs font-bold">قسم التوثيق الإلكتروني</p>
             </div>
             
             <div className="flex justify-center w-1/3">
-               <AdenLogo size={80} />
+               <AdenLogo size={60} />
             </div>
 
-            <div className="text-left w-1/3 flex flex-col gap-2 items-end font-sans">
-               <p className="font-bold text-sm flex justify-between w-full" dir="ltr">
+            <div className="text-left w-1/3 flex flex-col gap-1 items-end font-sans">
+               <p className="font-bold text-xs flex justify-between w-full" dir="ltr">
                  <span>Date:</span> <span>{new Date(agreement.createdAt).toLocaleDateString('en-GB')}</span>
                </p>
-               <p className="font-bold text-sm flex justify-between w-full" dir="ltr">
+               <p className="font-bold text-xs flex justify-between w-full" dir="ltr">
                  <span>Ref:</span> <span>{agreement.id.slice(0, 8).toUpperCase()}</span>
                </p>
-               <div className="mt-2 text-right">
-                 <Barcode value={agreement.serialNumber} width={1} height={40} fontSize={12} displayValue={true} background="#ffffff" lineColor="#000000" margin={0} />
-               </div>
+               <p className="font-bold text-xs flex justify-between w-full mt-1" dir="ltr">
+                 <span>SN:</span> <span>{agreement.serialNumber}</span>
+               </p>
             </div>
           </div>
 
-          <div className="text-center mb-10">
-             <h1 className="text-3xl font-black underline decoration-2 underline-offset-8">مكاتبة إلكترونية (اتفاق أولي)</h1>
+          <div className="text-center mb-6">
+             <h1 className="text-2xl font-black underline decoration-2 underline-offset-4">مكاتبة إلكترونية (اتفاق أولي)</h1>
           </div>
 
-          <div className="text-justify leading-loose text-base mb-8">
-             <p className="font-bold mb-4 text-lg">
+          <div className="text-justify leading-relaxed text-sm mb-4">
+             <p className="font-bold mb-3 text-base">
                بناءً على الشروط والأحكام المعتمدة في منصة عدن للوساطة العقارية، تم الاتفاق بين كل من:
              </p>
 
-             <div className="flex gap-4 mb-8">
-                <div className="w-1/2 border border-black p-4">
-                   <h3 className="font-bold text-lg bg-black text-white px-2 py-1 inline-block mb-4">الطرف الأول (البائع)</h3>
-                   <div className="space-y-3 font-bold">
+             <div className="flex gap-3 mb-4">
+                <div className="w-1/2 border border-black p-3">
+                   <h3 className="font-bold text-base bg-black text-white px-2 py-1 inline-block mb-3">الطرف الأول (البائع)</h3>
+                   <div className="space-y-2 font-bold text-sm">
                      <p>الاسم الرباعي: {agreement.sellerName}</p>
                      <p>رقم الهاتف: <span dir="ltr">{agreement.sellerPhone}</span></p>
                      <p>الإقرار: <span className="text-slate-600">تمت الموافقة والمصادقة إلكترونياً</span></p>
                    </div>
                 </div>
-                <div className="w-1/2 border border-black p-4">
-                   <h3 className="font-bold text-lg bg-black text-white px-2 py-1 inline-block mb-4">الطرف الثاني (المشتري)</h3>
-                   <div className="space-y-3 font-bold">
+                <div className="w-1/2 border border-black p-3">
+                   <h3 className="font-bold text-base bg-black text-white px-2 py-1 inline-block mb-3">الطرف الثاني (المشتري)</h3>
+                   <div className="space-y-2 font-bold text-sm">
                      <p>الاسم الرباعي: {agreement.buyerName}</p>
                      <p>رقم الهاتف: <span dir="ltr">{agreement.buyerPhone}</span></p>
                      <p>الإقرار: <span className="text-slate-600">تمت الموافقة والمصادقة إلكترونياً</span></p>
@@ -250,45 +240,35 @@ export default function ElectronicAgreementView({ agreementId, lang, onBack }: P
                 </div>
              </div>
 
-             <div className="border border-black p-4 mb-8">
-                <h3 className="font-bold text-lg bg-black text-white px-2 py-1 inline-block mb-4">تفاصيل العقار والاتفاق المالي</h3>
-                <div className="space-y-4 font-bold">
+             <div className="border border-black p-3 mb-4">
+                <h3 className="font-bold text-base bg-black text-white px-2 py-1 inline-block mb-3">تفاصيل العقار والاتفاق المالي</h3>
+                <div className="space-y-2 font-bold text-sm">
                    <p>تفاصيل العقار: {agreement.propertyDetails}</p>
                    <p>عنوان العقار: {agreement.propertyAddress}</p>
                    <p>السعر المتفق عليه: {agreement.agreedPrice.toLocaleString("ar-IQ")} (دينار عراقي)</p>
                    <p>مبلغ العربون المستلم: {agreement.depositAmount.toLocaleString("ar-IQ")} (دينار عراقي)</p>
                    
-                   <div className="mt-4 pt-4 border-t border-black border-dashed">
-                      <p className="mb-2 underline">الشروط الخاصة بالاتفاق:</p>
-                      <p className="font-normal text-sm whitespace-pre-wrap leading-relaxed">{agreement.conditions}</p>
+                   <div className="mt-3 pt-3 border-t border-black border-dashed">
+                      <p className="mb-1 underline">الشروط الخاصة بالاتفاق:</p>
+                      <p className="font-normal text-xs whitespace-pre-wrap leading-relaxed">{agreement.conditions}</p>
                    </div>
-                   <p className="mt-4">مدة سريان المكاتبة: {agreement.validityDays} يوماً من تاريخ الإصدار.</p>
+                   <p className="mt-3 text-xs">مدة سريان المكاتبة: {agreement.validityDays} يوماً من تاريخ الإصدار.</p>
                 </div>
              </div>
 
-             <div className="bg-slate-100 p-4 border border-black text-sm font-bold text-justify leading-relaxed">
+             <div className="bg-slate-100 p-3 border border-black text-xs font-bold text-justify leading-relaxed mb-4">
                تنويه قانوني: هذه المكاتبة الإلكترونية صادرة من نظام التوثيق الخاص بمنصة "عدن للوساطة العقارية"، وتعتبر وثيقة تنظيمية لإثبات الاتفاق الأولي ونية الطرفين في إتمام الصفقة العقارية. هذه الوثيقة لا تُعد سند ملكية ولا عقداً ناقلاً للملكية، ويتوجب على الطرفين استكمال الإجراءات الرسمية في دوائر التسجيل العقاري المختصة وفقاً للقانون العراقي.
              </div>
           </div>
 
-          <div className="absolute bottom-[20mm] left-[20mm] right-[20mm]">
-             <div className="flex justify-between items-end border-t-2 border-black pt-4">
-                <div className="font-bold text-center">
-                   <p className="mb-10">الختم الإلكتروني للمنصة</p>
-                   <div className="w-32 h-32 border-4 border-[#F27D26] rounded-full mx-auto flex items-center justify-center opacity-80 rotate-[-15deg]">
-                     <div className="text-center">
-                       <p className="text-[#F27D26] font-black text-xl">منصة عدن</p>
-                       <p className="text-[#F27D26] font-bold text-xs uppercase mt-1">وثيقة معتمدة</p>
-                     </div>
-                   </div>
-                </div>
-
+          <div className="mt-4 border-t-2 border-black pt-4">
+             <div className="flex justify-center items-center">
                 <div className="text-center font-bold">
-                   <p className="mb-2 text-sm">للتحقق من صحة الوثيقة</p>
-                   <div className="border-2 border-black p-2 bg-white inline-block">
+                   <p className="mb-1 text-xs">للتحقق من صحة الوثيقة</p>
+                   <div className="border border-black p-1 bg-white inline-block">
                      <QRCodeSVG 
                        value={`https://adenintl.site/verify/${agreement.serialNumber}`}
-                       size={100}
+                       size={70}
                        bgColor={"#ffffff"}
                        fgColor={"#000000"}
                        level={"H"}

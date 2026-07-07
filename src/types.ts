@@ -357,12 +357,16 @@ export interface AdCampaign {
 export interface ServiceProvider {
   id: string;
   name: string;
+  ownerName?: string;
+  whatsapp?: string;
   category: string;
   logo: string;
   coverImage: string;
   description: string;
   yearsOfExperience: number;
   governorate: string;
+  district?: string;
+  neighborhood?: string;
   city: string;
   address: string;
   coordinates: { lat: number; lng: number };
@@ -377,6 +381,8 @@ export interface ServiceProvider {
   };
   workingHours: string;
   portfolio: string[];
+  hasDelivery?: boolean;
+  materialsOffered?: string[];
   promoVideo?: string;
   rating: number;
   reviewCount: number;

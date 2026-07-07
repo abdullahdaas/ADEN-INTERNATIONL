@@ -76,13 +76,13 @@ export async function fetchProperties(filters: Record<string, any> = {}): Promis
     }
   });
   
-  const res = await fetch(`${API_BASE}/properties?${params.toString()}`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/properties?${params.toString()}`, { headers: getAuthHeadersGET(), cache: "no-store" });
   if (!res.ok) throw new Error('Failed to fetch properties');
   return res.json();
 }
 
 export async function fetchPropertyById(id: string): Promise<Property> {
-  const res = await fetch(`${API_BASE}/properties/${id}`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/properties/${id}`, { headers: getAuthHeadersGET(), cache: "no-store" });
   if (!res.ok) throw new Error('Failed to fetch property details');
   return res.json();
 }
@@ -107,7 +107,7 @@ export async function updateProperty(id: string, property: Partial<Property>): P
   return res.json();
 }
 
-export async function deleteProperty(id: string, hard = false): Promise<boolean> { console.log('deleteProperty called. Token:', localStorage.getItem('aden-admin-token'), 'Headers:', getAuthHeaders());
+export async function deleteProperty(id: string, hard = true): Promise<boolean> { console.log('deleteProperty called. Token:', localStorage.getItem('aden-admin-token'), 'Headers:', getAuthHeaders());
   const res = await fetch(`${API_BASE}/properties/${id}${hard ? '?hard=true' : ''}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
@@ -118,25 +118,25 @@ export async function deleteProperty(id: string, hard = false): Promise<boolean>
 }
 
 export async function fetchAgents(): Promise<Agent[]> {
-  const res = await fetch(`${API_BASE}/agents`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/agents`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch agents');
   return res.json();
 }
 
 export async function fetchAgentById(id: string): Promise<Agent & { properties: Property[] }> {
-  const res = await fetch(`${API_BASE}/agents/${id}`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/agents/${id}`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch agent details');
   return res.json();
 }
 
 export async function fetchDeals(): Promise<CompletedDeal[]> {
-  const res = await fetch(`${API_BASE}/deals`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/deals`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch completed deals');
   return res.json();
 }
 
 export async function fetchMessages(): Promise<ContactMessage[]> {
-  const res = await fetch(`${API_BASE}/messages`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/messages`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch messages');
   return res.json();
 }
@@ -161,7 +161,7 @@ export async function markMessageRead(id: string): Promise<ContactMessage> {
 }
 
 export async function fetchPayments(): Promise<PaymentProof[]> {
-  const res = await fetch(`${API_BASE}/payments`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/payments`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch payments');
   return res.json();
 }
@@ -198,13 +198,13 @@ export async function fetchStats(): Promise<{
   activeRegions: { name: string; count: number }[];
   governorateStats: MarketIndicator[];
 }> {
-  const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeadersGET(), cache: "no-store" });
   if (!res.ok) throw new Error('Failed to fetch statistics');
   return res.json();
 }
 
 export async function fetchSupervisors(): Promise<Supervisor[]> {
-  const res = await fetch(`${API_BASE}/supervisors`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/supervisors`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch supervisors');
   return res.json();
 }
@@ -243,7 +243,7 @@ export async function deleteSupervisor(id: string): Promise<boolean> {
 }
 
 export async function fetchProfileByIdentity(identity: string): Promise<{ profile: CitizenProfile | null; properties: Property[] }> {
-  const res = await fetch(`${API_BASE}/profiles/${encodeURIComponent(identity)}`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/profiles/${encodeURIComponent(identity)}`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch profile');
   return res.json();
 }
@@ -262,13 +262,13 @@ export async function saveProfile(profile: Partial<CitizenProfile> & { emailOrPh
 }
 
 export async function fetchAllProfiles(): Promise<CitizenProfile[]> {
-  const res = await fetch(`${API_BASE}/profiles`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/profiles`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch profiles');
   return res.json();
 }
 
 export async function fetchSettings(): Promise<any> {
-  const res = await fetch(`${API_BASE}/settings`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/settings`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch settings');
   return res.json();
 }
@@ -424,7 +424,7 @@ export async function incrementPhoneViews(id: string): Promise<void> {
 
 
 export const fetchAgreements = async (): Promise<any[]> => {
-  const res = await fetch('/api/agreements', { headers: getAuthHeadersGET() });
+  const res = await fetch('/api/agreements', { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch agreements');
   return res.json();
 };
@@ -440,7 +440,7 @@ export const updateAgreementStatus = async (id: string, status: string): Promise
 };
 
 export const fetchServiceProviders = async (): Promise<any[]> => {
-  const res = await fetch('/api/service-providers', { headers: getAuthHeadersGET() });
+  const res = await fetch('/api/service-providers', { headers: getAuthHeadersGET(), cache: 'no-store' });
   return res.json();
 };
 export const addServiceProvider = async (provider: any): Promise<any> => {
@@ -468,7 +468,7 @@ export const deleteServiceProvider = async (id: string): Promise<any> => {
 };
 
 export const fetchProviderApplications = async (): Promise<any[]> => {
-  const res = await fetch('/api/provider-applications', { headers: getAuthHeadersGET() });
+  const res = await fetch('/api/provider-applications', { headers: getAuthHeadersGET(), cache: 'no-store' });
   return res.json();
 };
 export const submitProviderApplication = async (app: any): Promise<any> => {
@@ -518,7 +518,7 @@ export async function deleteGisItem(collection: string, id: string) {
 }
 
 export async function fetchNotifications(): Promise<UserNotification[]> {
-  const res = await fetch(`${API_BASE}/notifications`, { headers: getAuthHeadersGET() });
+  const res = await fetch(`${API_BASE}/notifications`, { headers: getAuthHeadersGET(), cache: 'no-store' });
   if (!res.ok) return [];
   return res.json();
 }
@@ -531,7 +531,7 @@ export async function markNotificationRead(id: string): Promise<void> {
 }
 
 export const fetchReviews = async (propertyId: string): Promise<any[]> => {
-  const res = await fetch('/api/reviews/' + propertyId, { headers: getAuthHeadersGET() });
+  const res = await fetch('/api/reviews/' + propertyId, { headers: getAuthHeadersGET(), cache: 'no-store' });
   return res.json();
 };
 
