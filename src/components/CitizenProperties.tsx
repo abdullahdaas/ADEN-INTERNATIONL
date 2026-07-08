@@ -7,7 +7,7 @@ import {
 import { Property, PaymentProof, CitizenProfile } from '../types';
 import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments } from '../utils/api';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
-import { batchUploadToSupabase } from '../data/supabaseStorage';
+import { batchUploadToSpaces } from '../data/spacesClient';
 import { SmartLocationPicker } from './SmartLocationPicker';
 
 interface CitizenPropertiesProps {
@@ -256,13 +256,13 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingEditImage(true);
-      console.log("[CitizenProperties handlePropertyImageAdd] Starting Supabase upload for", file.name);
+      console.log("[CitizenProperties handlePropertyImageAdd] Starting upload for", file.name);
       const startTime = Date.now();
       try {
         const compressed = await compressImage(file);
         const tempId = selectedEditProp?.id || 'temp';
         
-        const urls = await batchUploadToSupabase(tempId, [compressed], (prog) => {
+        const urls = await batchUploadToSpaces(tempId, [compressed], (prog) => {
            console.log(`[CitizenProperties handlePropertyImageAdd] Progress: ${prog}%`);
         });
         
@@ -272,11 +272,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
         }
       } catch (err: any) {
         console.error("[CitizenProperties handlePropertyImageAdd] Failed to upload edit image", err);
-        let errorMsg = err.message || 'Unknown error';
-        if (errorMsg.includes('Invalid Compact JWS') || errorMsg.includes('JWSError')) {
-          errorMsg = 'مفتاح Supabase (Anon Key) مفقود أو غير صالح. يرجى إضافته في الإعدادات.';
-        }
-        alert('فشل الرفع: ' + errorMsg);
+        alert('فشل الرفع: ' + (err.message || 'Unknown error'));
       } finally {
         setIsUploadingEditImage(false);
       }

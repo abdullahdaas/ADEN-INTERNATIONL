@@ -17,6 +17,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '3008';
 // Removed top level vite import
 import { db, firestore } from './src/data/db';
 import { deleteFileFromSupabase } from './src/data/supabaseStorage';
+import { uploadFileToSpaces, deleteFileFromSpaces } from './src/data/spacesStorage';
 
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, Supervisor, CitizenProfile, ActivityLog, UserNotification, PlatformSettings, OTPLog } from './src/types';
 
@@ -716,7 +717,8 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
     const oldImages = p.images || [];
     const removedImages = oldImages.filter(img => !newImages.includes(img));
     for (const url of removedImages) {
-      await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete image', e));
+      await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete Supabase image', e));
+      await deleteFileFromSpaces(url).catch(e => console.error('Failed to delete Spaces image', e));
     }
     await db.properties.update(p.id!, updated);
     
@@ -796,7 +798,8 @@ app.delete('/api/properties/:id', requireAuth, async (req, res) => {
         await db.properties.remove(p.id!);
         if (p.images && p.images.length > 0) {
           for (const url of p.images) {
-            await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete image', e));
+            await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete Supabase image', e));
+            await deleteFileFromSpaces(url).catch(e => console.error('Failed to delete Spaces image', e));
           }
         }
         console.log(`[SUCCESS] - Property hard deleted successfully. Rows affected: 1`);
@@ -1391,6 +1394,52 @@ app.get('/api/stats', async (req, res) => {
     avgDaysToSell, avgDaysToRent, highestSale, highestRent,
     activeRegions, governorateStats
   });
+});
+
+// ── DigitalOcean Spaces Image Upload Endpoint ─────────────────────────────────
+app.post('/api/upload-images', requireAuth, async (req: any, res: any) => {
+  try {
+    const { propertyId, files } = req.body as {
+      propertyId?: string;
+      files?: Array<{ name: string; type: string; base64: string }>;
+    };
+
+    if (!propertyId || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ success: false, message: 'propertyId and at least one file are required.' });
+    }
+
+    if (files.length > 30) {
+      return res.status(400).json({ success: false, message: 'Cannot upload more than 30 files at once.' });
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+    const urls: string[] = [];
+    for (const file of files) {
+      if (!allowedMimeTypes.includes(file.type)) {
+        return res.status(400).json({ success: false, message: `Invalid file type: ${file.type}` });
+      }
+
+      if (!file.base64 || !file.base64.startsWith('data:')) {
+        return res.status(400).json({ success: false, message: 'Invalid base64 payload.' });
+      }
+
+      const base64Data = file.base64.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      if (buffer.length > 10 * 1024 * 1024) { // 10 MB max per image
+        return res.status(400).json({ success: false, message: 'File exceeds 10 MB limit.' });
+      }
+
+      const url = await uploadFileToSpaces(propertyId, file.name, buffer, file.type);
+      urls.push(url);
+    }
+
+    res.json({ success: true, urls });
+  } catch (err: any) {
+    console.error('[upload-images] Error:', err.message);
+    res.status(500).json({ success: false, message: err.message || 'Upload failed.' });
+  }
 });
 
 async function startServer() {

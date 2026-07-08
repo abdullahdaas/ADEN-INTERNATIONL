@@ -1,16 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const FALLBACK_URL = 'https://jwgcowzsslbidcnyphvs.supabase.co';
-// A syntactically valid JWT dummy key to prevent "Invalid Compact JWS" crashes.
-const DUMMY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
 
 let envUrl = '';
 let envKey = '';
-
-if (typeof process !== 'undefined' && process.env) {
-  envUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-  envKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
-}
 
 // @ts-ignore
 if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -20,16 +19,67 @@ if (typeof import.meta !== 'undefined' && import.meta.env) {
   if (import.meta.env.VITE_SUPABASE_ANON_KEY) envKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 }
 
-const finalUrl = envUrl || FALLBACK_URL;
-const finalKey = envKey || DUMMY_KEY;
+if (!envUrl && typeof process !== 'undefined' && process.env) {
+  envUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  if (!envKey) {
+    envKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+  }
+}
+
+if (!envUrl) {
+  envUrl = 'https://jwgcowzsslbidcnyphvs.supabase.co';
+}
 
 if (!envKey) {
   console.warn("⚠️ VITE_SUPABASE_ANON_KEY is missing from environment variables.");
 }
 
-export const supabase = createClient(finalUrl, finalKey);
+let _supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    if (!envKey) {
+      throw new Error('Supabase Anon Key is missing. Please add VITE_SUPABASE_ANON_KEY in settings.');
+    }
+    _supabase = createClient(envUrl, envKey);
+  }
+  return _supabase;
+}
+
+export { getSupabase };
 
 export const BUCKET_NAME = 'property-images';
+
+function getSafePropertyFolder(propertyId: string): string {
+  return propertyId.replace(/[^a-zA-Z0-9_-]/g, '') || `property_${Date.now()}`;
+}
+
+function getFileExtension(file: File): string {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  if (ext) return ext;
+
+  switch (file.type) {
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/png':
+      return 'png';
+    case 'image/webp':
+      return 'webp';
+    case 'image/gif':
+      return 'gif';
+    default:
+      return 'bin';
+  }
+}
+
+function validateImageFile(file: File): void {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error(`Unsupported image type: ${file.type}`);
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error('Image is too large. Maximum size is 10MB.');
+  }
+}
 
 /**
  * Upload a single file to Supabase Storage
@@ -39,13 +89,20 @@ export const uploadFileToSupabase = async (propertyId: string, file: File): Prom
     throw new Error('Supabase Anon Key is missing. Please add VITE_SUPABASE_ANON_KEY in settings.');
   }
 
-  const extension = file.name.split('.').pop() || 'webp';
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${extension}`;
-  const filePath = `properties/${propertyId}/${fileName}`;
+  validateImageFile(file);
 
-  const { data, error } = await supabase.storage
+  const extension = getFileExtension(file);
+  const uniqueId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const fileName = `${uniqueId}.${extension}`;
+  const filePath = `properties/${getSafePropertyFolder(propertyId)}/${fileName}`;
+
+  const { data, error } = await getSupabase().storage
     .from(BUCKET_NAME)
     .upload(filePath, file, {
+      contentType: file.type,
       cacheControl: '3600',
       upsert: false,
     });
@@ -54,9 +111,9 @@ export const uploadFileToSupabase = async (propertyId: string, file: File): Prom
     throw error;
   }
 
-  const { data: publicUrlData } = supabase.storage
+  const { data: publicUrlData } = getSupabase().storage
     .from(BUCKET_NAME)
-    .getPublicUrl(filePath);
+    .getPublicUrl(data.path);
 
   return publicUrlData.publicUrl;
 };
@@ -104,7 +161,7 @@ export const deleteFileFromSupabase = async (publicUrl: string): Promise<void> =
     const urlParts = publicUrl.split(`/public/${BUCKET_NAME}/`);
     if (urlParts.length === 2) {
       const filePath = decodeURIComponent(urlParts[1]);
-      const { error } = await supabase.storage
+      const { error } = await getSupabase().storage
         .from(BUCKET_NAME)
         .remove([filePath]);
         

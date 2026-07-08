@@ -646,37 +646,33 @@ export default function App() {
     setUploadProgress(0);
     setUploadError('');
     
-    console.log("[handleImageUpload] Starting Supabase upload for", files.length, "files");
+    console.log("[handleImageUpload] Starting upload for", files.length, "files");
     const startTimeTotal = Date.now();
     
     const tempPropertyId = 'temp_' + Date.now() + Math.random().toString(36).substring(2,7);
     
     try {
-      // First compress all files
+      // Compress all files before upload
       const compressedFiles = await Promise.all(
         Array.from(files).map((file: any) => compressImage(file as File))
       );
 
-      // Then batch upload to Supabase
+      // Batch upload directly to Supabase Storage public bucket
       const results = await batchUploadToSupabase(tempPropertyId, compressedFiles, (prog) => {
         setUploadProgress(prog);
       });
       
-      console.log(`[handleImageUpload] All promises resolved in ${Date.now() - startTimeTotal}ms. URLs:`, results);
+      console.log(`[handleImageUpload] All uploads resolved in ${Date.now() - startTimeTotal}ms. URLs:`, results);
       
       setUploadedImages((prev) => [...prev, ...results]);
       setIsUploadingImage(false);
       setUploadProgress(100);
       
-      // Delay resetting progress to let the user see 100%
       setTimeout(() => setUploadProgress(0), 1000);
       
     } catch (err: any) {
       console.error("[handleImageUpload] Caught error:", err);
-      let errorMsg = err.message || 'Unknown error';
-      if (errorMsg.includes('Invalid Compact JWS') || errorMsg.includes('JWSError')) {
-        errorMsg = lang === 'ar' ? 'مفتاح Supabase (Anon Key) مفقود أو غير صالح. يرجى إضافته في الإعدادات.' : 'Supabase Anon Key is missing or invalid. Please add it in the environment settings.';
-      }
+      const errorMsg = err.message || 'Unknown error';
       setUploadError(lang === 'ar' ? `فشل الرفع: ${errorMsg}` : `Upload failed: ${errorMsg}`);
       setIsUploadingImage(false);
       setUploadProgress(0);
