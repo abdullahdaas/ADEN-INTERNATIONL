@@ -26,10 +26,6 @@ if (!envUrl && typeof process !== 'undefined' && process.env) {
   }
 }
 
-if (!envUrl) {
-  envUrl = 'https://jwgcowzsslbidcnyphvs.supabase.co';
-}
-
 if (!envKey) {
   console.warn("⚠️ VITE_SUPABASE_ANON_KEY is missing from environment variables.");
 }
@@ -38,6 +34,9 @@ let _supabase: SupabaseClient | null = null;
 
 function getSupabase(): SupabaseClient {
   if (!_supabase) {
+    if (!envUrl) {
+      throw new Error('Supabase URL is missing. Please add VITE_SUPABASE_URL in settings.');
+    }
     if (!envKey) {
       throw new Error('Supabase Anon Key is missing. Please add VITE_SUPABASE_ANON_KEY in settings.');
     }
@@ -85,6 +84,9 @@ function validateImageFile(file: File): void {
  * Upload a single file to Supabase Storage
  */
 export const uploadFileToSupabase = async (propertyId: string, file: File): Promise<string> => {
+  if (!envUrl) {
+    throw new Error('Supabase URL is missing. Please add VITE_SUPABASE_URL in settings.');
+  }
   if (!envKey) {
     throw new Error('Supabase Anon Key is missing. Please add VITE_SUPABASE_ANON_KEY in settings.');
   }
