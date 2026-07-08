@@ -6,10 +6,14 @@ if (!supabaseKey || supabaseKey === 'YOUR_SUPABASE_ANON_KEY') {
   console.warn("Supabase Anon Key is missing or invalid. Please add VITE_SUPABASE_ANON_KEY to your environment variables.");
 }
 
+if (!supabaseUrl) {
+  console.warn("Supabase URL is missing. Please add VITE_SUPABASE_URL to your environment variables.");
+}
+
 // Initialize Supabase client
 export const supabase = createClient(
-  supabaseUrl || 'https://jwgcowzsslbidcnyphvs.supabase.co',
-  supabaseKey || 'YOUR_SUPABASE_ANON_KEY' 
+  supabaseUrl || '',
+  supabaseKey || '' 
 );
 `;
 
