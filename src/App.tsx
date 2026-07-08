@@ -202,6 +202,7 @@ export default function App() {
   >("general");
   const [contactMsg, setContactMsg] = useState("");
   const [contactSuccess, setContactSuccess] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
 
   // Dynamic Locations lookup lists
   const [districtsList, setDistrictsList] = useState<any[]>([]);
@@ -464,7 +465,9 @@ export default function App() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName || !contactPhone || !contactMsg) return;
+    if (!contactName || !contactPhone || !contactMsg || contactSubmitting) return;
+
+    setContactSubmitting(true);
 
     try {
       await sendMessage({
@@ -481,6 +484,9 @@ export default function App() {
       setTimeout(() => setContactSuccess(false), 5000);
     } catch (err) {
       console.error(err);
+      alert(lang === "ar" ? "تعذر إرسال الرسالة حالياً. حاول مرة أخرى." : "Failed to send your message. Please try again.");
+    } finally {
+      setContactSubmitting(false);
     }
   };
 
@@ -1469,11 +1475,18 @@ export default function App() {
                   <button
                     id="btn-submit-contact-msg"
                     type="submit"
-                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-3 text-xs font-bold text-[#ffffff] transition-all cursor-pointer flex items-center gap-1.5"
+                    disabled={contactSubmitting}
+                    className="rounded-xl bg-[#F27D26] hover:bg-[#ff8a3d] px-6 py-3 text-xs font-bold text-[#ffffff] transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
                   >
                     <Send className="h-4 w-4" />
                     <span>
-                      {lang === "ar" ? "إرسال الرسالة للإدارة" : "Send message"}
+                      {contactSubmitting
+                        ? lang === "ar"
+                          ? "جاري الإرسال..."
+                          : "Sending..."
+                        : lang === "ar"
+                          ? "إرسال الرسالة للإدارة"
+                          : "Send message"}
                     </span>
                   </button>
                 </div>

@@ -512,6 +512,17 @@ function getAuthHeadersGET(): HeadersInit {
   return headers;
 }
 
+async function readJsonOrThrow<T = any>(res: Response, fallbackMessage: string): Promise<T> {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message =
+      (data && typeof data === 'object' && (data.message || data.error)) ||
+      fallbackMessage;
+    throw new Error(String(message));
+  }
+  return (data ?? {}) as T;
+}
+
 export async function fetchProperties(filters: Record<string, any> = {}): Promise<Property[]> {
   return fetchPropertiesFromSupabase(filters);
 }
@@ -749,7 +760,7 @@ export async function fetchOtpLogs(): Promise<any[]> {
 
 export async function fetchVisits(): Promise<any[]> {
   const res = await fetch(`${API_BASE}/visits`, { headers: getAuthHeaders() });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch visits');
 }
 
 export async function createVisit(visit: any): Promise<any> {
@@ -758,7 +769,7 @@ export async function createVisit(visit: any): Promise<any> {
     headers: getAuthHeaders(),
     body: JSON.stringify(visit)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to create visit request');
 }
 
 export async function updateVisitStatus(id: string, updates: any): Promise<any> {
@@ -767,7 +778,7 @@ export async function updateVisitStatus(id: string, updates: any): Promise<any> 
     headers: getAuthHeaders(),
     body: JSON.stringify(updates)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to update visit status');
 }
 
 export async function fetchAuctionParticipants(propertyId: string): Promise<any[]> {
@@ -811,7 +822,7 @@ export async function logActivity(log: any): Promise<void> {
 
 export async function fetchOffers(): Promise<any[]> {
   const res = await fetch(`${API_BASE}/offers`, { headers: getAuthHeaders() });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch offers');
 }
 
 export async function createOffer(offer: any): Promise<any> {
@@ -820,7 +831,7 @@ export async function createOffer(offer: any): Promise<any> {
     headers: getAuthHeaders(),
     body: JSON.stringify(offer)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to submit offer');
 }
 
 export async function updateOffer(id: string, updates: any): Promise<any> {
@@ -829,7 +840,7 @@ export async function updateOffer(id: string, updates: any): Promise<any> {
     headers: getAuthHeaders(),
     body: JSON.stringify(updates)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to update offer');
 }
 
 export async function createComplaint(complaint: any): Promise<any> {
@@ -838,12 +849,12 @@ export async function createComplaint(complaint: any): Promise<any> {
     headers: getAuthHeaders(),
     body: JSON.stringify(complaint)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to submit complaint');
 }
 
 export async function fetchComplaints(): Promise<any[]> {
   const res = await fetch(`${API_BASE}/complaints`, { headers: getAuthHeaders() });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch complaints');
 }
 
 export async function updateComplaint(id: string, updates: any): Promise<any> {
@@ -852,7 +863,7 @@ export async function updateComplaint(id: string, updates: any): Promise<any> {
     headers: getAuthHeaders(),
     body: JSON.stringify(updates)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to update complaint');
 }
 
 export async function incrementPhoneViews(id: string): Promise<void> {
@@ -881,7 +892,7 @@ export const updateAgreementStatus = async (id: string, status: string): Promise
 
 export const fetchServiceProviders = async (): Promise<any[]> => {
   const res = await fetch('/api/service-providers', { headers: getAuthHeadersGET(), cache: 'no-store' });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch service providers');
 };
 export const addServiceProvider = async (provider: any): Promise<any> => {
   const res = await fetch('/api/service-providers', {
@@ -889,7 +900,7 @@ export const addServiceProvider = async (provider: any): Promise<any> => {
     headers: getAuthHeaders(),
     body: JSON.stringify(provider)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to add service provider');
 };
 export const updateServiceProvider = async (id: string, provider: any): Promise<any> => {
   const res = await fetch('/api/service-providers/' + id, {
@@ -897,19 +908,19 @@ export const updateServiceProvider = async (id: string, provider: any): Promise<
     headers: getAuthHeaders(),
     body: JSON.stringify(provider)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to update service provider');
 };
 export const deleteServiceProvider = async (id: string): Promise<any> => {
   const res = await fetch('/api/service-providers/' + id, {
     method: 'DELETE',
     headers: getAuthHeaders()
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to delete service provider');
 };
 
 export const fetchProviderApplications = async (): Promise<any[]> => {
   const res = await fetch('/api/provider-applications', { headers: getAuthHeadersGET(), cache: 'no-store' });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch provider applications');
 };
 export const submitProviderApplication = async (app: any): Promise<any> => {
   const res = await fetch('/api/provider-applications', {
@@ -917,7 +928,7 @@ export const submitProviderApplication = async (app: any): Promise<any> => {
     headers: getAuthHeaders(),
     body: JSON.stringify(app)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to submit provider application');
 };
 export const updateProviderApplication = async (id: string, updates: any): Promise<any> => {
   const res = await fetch('/api/provider-applications/' + id, {
@@ -925,7 +936,7 @@ export const updateProviderApplication = async (id: string, updates: any): Promi
     headers: getAuthHeaders(),
     body: JSON.stringify(updates)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to update provider application');
 };
 
 // GIS Data Management
@@ -972,7 +983,7 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export const fetchReviews = async (propertyId: string): Promise<any[]> => {
   const res = await fetch('/api/reviews/' + propertyId, { headers: getAuthHeadersGET(), cache: 'no-store' });
-  return res.json();
+  return readJsonOrThrow<any[]>(res, 'Failed to fetch reviews');
 };
 
 export const submitReview = async (review: any): Promise<any> => {
@@ -981,5 +992,5 @@ export const submitReview = async (review: any): Promise<any> => {
     headers: getAuthHeaders(),
     body: JSON.stringify(review)
   });
-  return res.json();
+  return readJsonOrThrow<any>(res, 'Failed to submit review');
 };

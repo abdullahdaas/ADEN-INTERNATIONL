@@ -70,14 +70,13 @@ export default function ElectronicAgreementForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (existingRequest) return;
     setStep(2);
   };
 
   const [newAgreementId, setNewAgreementId] = useState<string>('');
 
   const handlePayment = async () => {
-    if (isSubmitting || existingRequest) return;
+    if (isSubmitting) return;
     setIsSubmitting(true);
     
     try {
@@ -403,7 +402,6 @@ export default function ElectronicAgreementForm({
 
             <button
               type="submit"
-              disabled={existingRequest}
               className="w-full bg-[#F27D26] hover:bg-[#d96a1a] disabled:opacity-50 disabled:hover:bg-[#F27D26] text-[#ffffff] py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-[#F27D26]/20"
             >
               متابعة للدفع

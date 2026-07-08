@@ -83,10 +83,12 @@ export default function PropertyDetails({
           time: visitTime
         })
       });
-      if (res.ok) {
-        window.alert('تم إرسال طلب الحجز بنجاح! سيتم إشعارك عند القبول.');
-        setShowVisitModal(false);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || err?.error || 'تعذر إرسال طلب الحجز');
       }
+      window.alert('تم إرسال طلب الحجز بنجاح! سيتم إشعارك عند القبول.');
+      setShowVisitModal(false);
     } catch (err) {
       window.alert('حدث خطأ أثناء حجز الموعد.');
     }
@@ -191,6 +193,7 @@ export default function PropertyDetails({
       setTransactionId('');
     } catch (err) {
       console.error(err);
+      window.alert('تعذر إرسال إثبات الدفع. تأكد من تسجيل الدخول وحاول مرة أخرى.');
     }
   };
 

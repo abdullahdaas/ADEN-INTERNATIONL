@@ -75,6 +75,95 @@ function normalizePaymentRow(row: any): PaymentProof {
   } as PaymentProof;
 }
 
+function isMissingRelationError(message?: string): boolean {
+  if (!message) return false;
+  return /relation .* does not exist|table .* does not exist/i.test(message);
+}
+
+function toSnakeCaseObject(input: Record<string, any>): Record<string, any> {
+  const output: Record<string, any> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const snake = key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+    output[snake] = value;
+  }
+  return output;
+}
+
+async function resolveSupabaseTable(candidates: string[]): Promise<string> {
+  const supabase = getServerSupabase();
+  let lastError: any;
+
+  for (const table of candidates) {
+    const probe = await supabase.from(table).select('id').limit(1);
+    if (!probe.error || !isMissingRelationError(probe.error.message)) {
+      return table;
+    }
+    lastError = probe.error;
+  }
+
+  throw lastError || new Error(`No matching Supabase table found: ${candidates.join(', ')}`);
+}
+
+async function selectAllRows(tableCandidates: string[]): Promise<any[]> {
+  const supabase = getServerSupabase();
+  const table = await resolveSupabaseTable(tableCandidates);
+  const result = await supabase.from(table).select('*');
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
+async function insertRow(tableCandidates: string[], payload: Record<string, any>): Promise<any> {
+  const supabase = getServerSupabase();
+  const table = await resolveSupabaseTable(tableCandidates);
+
+  let result = await supabase.from(table).insert(payload as any).select('*').single();
+  if (result.error && /column .* does not exist/i.test(result.error.message)) {
+    result = await supabase
+      .from(table)
+      .insert(toSnakeCaseObject(payload) as any)
+      .select('*')
+      .single();
+  }
+
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+async function updateRowById(
+  tableCandidates: string[],
+  id: string,
+  payload: Record<string, any>,
+): Promise<any> {
+  const supabase = getServerSupabase();
+  const table = await resolveSupabaseTable(tableCandidates);
+
+  let result = await supabase
+    .from(table)
+    .update(payload as any)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (result.error && /column .* does not exist/i.test(result.error.message)) {
+    result = await supabase
+      .from(table)
+      .update(toSnakeCaseObject(payload) as any)
+      .eq('id', id)
+      .select('*')
+      .single();
+  }
+
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+async function deleteRowById(tableCandidates: string[], id: string): Promise<void> {
+  const supabase = getServerSupabase();
+  const table = await resolveSupabaseTable(tableCandidates);
+  const result = await supabase.from(table).delete().eq('id', id);
+  if (result.error) throw result.error;
+}
+
 // Enforce HTTPS in production
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
@@ -423,42 +512,77 @@ app.get('/api/settings', async (req, res) => {
 
 // Service Providers
 app.get('/api/service-providers', async (req, res) => {
-  res.json(await db.serviceProviders.getAll());
+  try {
+    const providers = await selectAllRows(['service_providers', 'serviceProviders']);
+    res.json(providers);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch service providers' });
+  }
 });
 app.post('/api/service-providers', requireAuth, async (req, res) => {
-  await db.serviceProviders.add(req.body);
-  res.json({ success: true, provider: req.body });
+  try {
+    const provider = await insertRow(
+      ['service_providers', 'serviceProviders'],
+      { ...req.body, id: req.body.id || `sp-${Date.now()}` },
+    );
+    res.status(201).json({ success: true, provider });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to add service provider' });
+  }
 });
 app.put('/api/service-providers/:id', requireAdmin, async (req, res) => {
-  await db.serviceProviders.update(req.params.id, req.body);
-  res.json({ success: true });
+  try {
+    const provider = await updateRowById(['service_providers', 'serviceProviders'], req.params.id, req.body);
+    res.json({ success: true, provider });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to update service provider' });
+  }
 });
 app.delete('/api/service-providers/:id', requireAdmin, async (req, res) => {
-  await db.serviceProviders.remove(req.params.id);
-  res.json({ success: true });
+  try {
+    await deleteRowById(['service_providers', 'serviceProviders'], req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to delete service provider' });
+  }
 });
 
 // Provider Applications
 app.get('/api/provider-applications', async (req, res) => {
-  res.json(await db.providerApplications.getAll());
+  try {
+    const applications = await selectAllRows(['provider_applications', 'providerApplications']);
+    res.json(applications);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch provider applications' });
+  }
 });
-app.post('/api/provider-applications', requireAuth, async (req, res) => {
-  await db.providerApplications.add(req.body);
-  res.json({ success: true, application: req.body });
+app.post('/api/provider-applications', async (req, res) => {
+  try {
+    const application = await insertRow(
+      ['provider_applications', 'providerApplications'],
+      {
+        ...req.body,
+        id: req.body.id || `prov-app-${Date.now()}`,
+        status: req.body.status || 'pending',
+        createdAt: req.body.createdAt || new Date().toISOString(),
+      },
+    );
+    res.status(201).json({ success: true, application });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit provider application' });
+  }
 });
 app.put('/api/provider-applications/:id', requireAdmin, async (req, res) => {
-  await db.providerApplications.update(req.params.id, req.body);
-    const provApp = await db.providerApplications.getById(req.params.id);
-    if (provApp && provApp.emailOrPhone && (req.body.status === 'approved' || req.body.status === 'rejected')) {
-        const title = req.body.status === 'approved' ? 'تم الموافقة على طلب مزود الخدمة' : 'تم رفض طلب مزود الخدمة';
-        const msg = req.body.status === 'approved' ? 'تهانينا، تم قبول طلبك كمزود خدمة.' : 'نأسف، تم رفض طلبك.';
-        await db.notifications.add({
-            id: 'notif-' + Date.now() + Math.floor(Math.random()*1000),
-            userId: provApp.emailOrPhone,
-            title, message: msg, isRead: false, timestamp: new Date().toISOString()
-        });
-    }
-  res.json({ success: true });
+  try {
+    const updated = await updateRowById(
+      ['provider_applications', 'providerApplications'],
+      req.params.id,
+      { ...req.body, updatedAt: new Date().toISOString() },
+    );
+    res.json({ success: true, application: updated });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to update provider application' });
+  }
 });
 
 // GIS Routes
@@ -910,19 +1034,37 @@ app.get('/api/agents/:id', async (req, res) => {
 
 
 app.get('/api/reviews/:propertyId', async (req, res) => {
-  const all = await db.reviews.getAll();
-  res.json(all.filter(r => r.propertyId === req.params.propertyId));
+  try {
+    const all = await selectAllRows(['reviews']);
+    res.json(all.filter((r: any) => r.propertyId === req.params.propertyId || r.property_id === req.params.propertyId));
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch reviews' });
+  }
 });
-app.post('/api/reviews', requireAuth, async (req, res) => {
-  await db.reviews.add(req.body);
-  res.json({ success: true, review: req.body });
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const review = await insertRow(['reviews'], {
+      ...req.body,
+      id: req.body.id || `rev-${Date.now()}`,
+      createdAt: req.body.createdAt || new Date().toISOString(),
+      isApproved: req.body.isApproved ?? false,
+    });
+    res.status(201).json({ success: true, review });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit review' });
+  }
 });
 app.get('/api/deals', async (req, res) => {
   res.json(await db.deals.getAll());
 });
 
 app.get('/api/messages', async (req, res) => {
-    res.json(await db.messages.getAll());
+  try {
+    const messages = await selectAllRows(['messages']);
+    res.json(messages);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch messages' });
+  }
 });
 
 
@@ -938,25 +1080,27 @@ app.put('/api/notifications/:id/read', async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/messages', requireAuth, async (req, res) => {
-  const newMessage: ContactMessage = {
-    ...req.body,
-    id: 'msg-' + Date.now(),
-    createdAt: new Date().toISOString(),
-    isRead: false
-  };
-  await db.messages.add(newMessage);
-  res.status(201).json(newMessage);
+app.post('/api/messages', async (req, res) => {
+  try {
+    const newMessage: ContactMessage = {
+      ...req.body,
+      id: req.body.id || ('msg-' + Date.now()),
+      createdAt: req.body.createdAt || new Date().toISOString(),
+      isRead: false,
+    };
+    const message = await insertRow(['messages'], newMessage as any);
+    res.status(201).json(message);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit message' });
+  }
 });
 
 app.put('/api/messages/:id/read', requireAuth, async (req, res) => {
-    const msg = await db.messages.getById(req.params.id);
-  if (msg) {
-    await db.messages.update(msg.id!, { isRead: true });
-    msg.isRead = true;
+  try {
+    const msg = await updateRowById(['messages'], req.params.id, { isRead: true });
     res.json(msg);
-  } else {
-    res.status(404).json({ error: 'Message not found' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to mark message as read' });
   }
 });
 
@@ -1247,55 +1391,76 @@ app.get('/api/auctions/:propertyId/bids', async (req, res) => {
 
 // --- Offers ---
 app.get('/api/offers', async (req, res) => {
-  const userId = req.headers['x-user-id'];
-  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
-  const allOffers = await db.offers.getAll();
-  
-  if (isAdmin) return res.json(allOffers);
-  if (!userId) return res.json([]);
-  
-  res.json(allOffers.filter(o => o.buyerId === userId || o.ownerId === userId));
+  try {
+    const userId = req.headers['x-user-id'];
+    const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
+    const allOffers = await selectAllRows(['offers']);
+
+    if (isAdmin) return res.json(allOffers);
+    if (!userId) return res.json([]);
+
+    res.json(allOffers.filter((o: any) => o.buyerId === userId || o.ownerId === userId || o.buyer_id === userId || o.owner_id === userId));
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch offers' });
+  }
 });
 
 app.post('/api/offers', requireAuth, async (req, res) => {
-  const newOffer = {
-    ...req.body,
-    id: 'offer-' + Date.now(),
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
-  await db.offers.add(newOffer);
-  res.status(201).json(newOffer);
+  try {
+    const newOffer = {
+      ...req.body,
+      id: req.body.id || ('offer-' + Date.now()),
+      status: req.body.status || 'pending',
+      createdAt: req.body.createdAt || new Date().toISOString(),
+    };
+    const offer = await insertRow(['offers'], newOffer);
+    res.status(201).json(offer);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit offer' });
+  }
 });
 
 app.put('/api/offers/:id', requireAuth, async (req, res) => {
-  const offer = await db.offers.getById(req.params.id);
-  if (!offer) return res.status(404).json({error: 'Not found'});
-  await db.offers.update(offer.id, req.body);
-  res.json(await db.offers.getById(offer.id));
+  try {
+    const offer = await updateRowById(['offers'], req.params.id, req.body);
+    res.json(offer);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to update offer' });
+  }
 });
 
 // --- Complaints ---
 app.post('/api/complaints', requireAuth, async (req, res) => {
-  const newComp = {
-    ...req.body,
-    id: 'comp-' + Date.now(),
-    status: 'open',
-    createdAt: new Date().toISOString()
-  };
-  await db.complaints.add(newComp);
-  res.status(201).json(newComp);
+  try {
+    const newComp = {
+      ...req.body,
+      id: req.body.id || ('comp-' + Date.now()),
+      status: req.body.status || 'open',
+      createdAt: req.body.createdAt || new Date().toISOString(),
+    };
+    const complaint = await insertRow(['complaints'], newComp);
+    res.status(201).json(complaint);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit complaint' });
+  }
 });
 
 app.get('/api/complaints', async (req, res) => {
-  res.json(await db.complaints.getAll());
+  try {
+    const complaints = await selectAllRows(['complaints']);
+    res.json(complaints);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch complaints' });
+  }
 });
 
 app.put('/api/complaints/:id', requireAdmin, async (req, res) => {
-  const comp = await db.complaints.getById(req.params.id);
-  if (!comp) return res.status(404).json({error: 'Not found'});
-  await db.complaints.update(comp.id, req.body);
-  res.json(await db.complaints.getById(comp.id));
+  try {
+    const comp = await updateRowById(['complaints'], req.params.id, req.body);
+    res.json(comp);
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to update complaint' });
+  }
 });
 
 // --- Phone View Increment ---

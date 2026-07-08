@@ -439,8 +439,9 @@ export default function ServiceProvidersList({
                       payload: appForm,
                     });
                     alert('خطأ في إرسال الطلب');
+                  } finally {
+                    setIsSubmitting(false);
                   }
-                  setIsSubmitting(false);
                 }}
                 className="flex-1 bg-[#F27D26] hover:bg-[#d96a1a] text-white py-3 rounded-xl font-bold transition-all disabled:opacity-50"
               >

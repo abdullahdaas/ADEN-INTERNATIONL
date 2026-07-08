@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
 import { CONSTRUCTION_MATERIALS } from '../data/constructionMaterials';
+import { submitProviderApplication } from '../utils/api';
 
 export function MaterialsProviderForm({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
@@ -40,13 +41,29 @@ export function MaterialsProviderForm({ onClose }: { onClose: () => void }) {
   const selectedGov = IRAQ_LOCATIONS.find(g => g.governorate === formData.governorate);
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const payload = {
+        ...formData,
+        category: 'المواد الإنشائية',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+
+      const response = await submitProviderApplication(payload);
+      if (!response?.success) {
+        throw new Error(response?.message || 'فشل إرسال طلب التسجيل');
+      }
+
       alert('تم تقديم طلبك بنجاح كمزود مواد إنشائية. سيتم مراجعة حسابك وتفعيله قريباً.');
-      setIsSubmitting(false);
       onClose();
-    }, 1500);
+    } catch (error) {
+      console.error('[MaterialsProviderForm] submitProviderApplication failed', error);
+      alert('تعذر إرسال الطلب حالياً. يرجى التحقق من بياناتك ثم المحاولة مرة أخرى.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
