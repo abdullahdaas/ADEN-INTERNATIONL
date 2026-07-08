@@ -200,6 +200,7 @@ export interface PaymentProof {
   id: string;
   propertyId: string;
   packageName: string;
+  paymentType?: 'featured_ad' | 'auction' | 'electronic_agreement';
   amount: number;
   paymentMethod: 'zain_cash' | 'qi_card';
   proofImage: string;

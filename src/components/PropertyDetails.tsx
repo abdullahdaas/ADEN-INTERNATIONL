@@ -9,7 +9,7 @@ import {
 import { Property, Agent, Review } from '../types';
 import { formatPrice } from './PropertyCard';
 
-import { sendMessage, submitPaymentProof, fetchReviews, submitReview } from '../utils/api';
+import { sendMessage, submitPaymentProof, fetchReviews, submitReview, createOffer, createComplaint } from '../utils/api';
 import { MapDisplay } from './MapDisplay';
 import { calculateDistance } from '../utils/distance';
 
@@ -177,6 +177,7 @@ export default function PropertyDetails({
       await submitPaymentProof({
         propertyId: property.id,
         packageName: selectedPackage,
+        paymentType: 'featured_ad',
         amount,
         paymentMethod,
         proofImage: proofImageFile ? URL.createObjectURL(proofImageFile) : 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=80',
@@ -190,6 +191,54 @@ export default function PropertyDetails({
       setTransactionId('');
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleOfferSubmit = async () => {
+    if (!user) {
+      window.alert('يجب تسجيل الدخول لإرسال عرض شراء');
+      return;
+    }
+    if (!offerAmount) return;
+
+    try {
+      await createOffer({
+        propertyId: property.id,
+        propertyTitle: property.title,
+        buyerId: user.emailOrPhone,
+        buyerName: user.name,
+        ownerId: property.ownerEmailOrPhone || property.agentId,
+        amount: Number(offerAmount),
+        message: offerMessage,
+      });
+      window.alert('تم إرسال العرض بنجاح!');
+      setShowOfferModal(false);
+      setOfferAmount('');
+      setOfferMessage('');
+    } catch (e) {
+      console.error('[PropertyDetails] offer submission failed', e);
+      window.alert('تعذر إرسال العرض. تأكد من تسجيل الدخول وحاول مرة أخرى.');
+    }
+  };
+
+  const handleComplaintSubmit = async () => {
+    if (!complaintSubject || !complaintDesc) return;
+
+    try {
+      await createComplaint({
+        reporterId: user?.emailOrPhone || 'guest',
+        reporterName: user?.name || 'Guest',
+        targetId: property.id,
+        subject: complaintSubject,
+        description: complaintDesc,
+      });
+      window.alert('تم إرسال البلاغ إلى الإدارة.');
+      setShowComplaintModal(false);
+      setComplaintSubject('');
+      setComplaintDesc('');
+    } catch (e) {
+      console.error('[PropertyDetails] complaint submission failed', e);
+      window.alert('تعذر إرسال البلاغ. تأكد من تسجيل الدخول وحاول مرة أخرى.');
     }
   };
 
@@ -958,26 +1007,7 @@ export default function PropertyDetails({
                   </div>
                 </div>
                 <div className="flex gap-2 pt-4">
-                  <button onClick={async () => {
-                    if (!offerAmount) return;
-                    try {
-                      await fetch('/api/offers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-user-id': user.emailOrPhone },
-                        body: JSON.stringify({
-                          propertyId: property.id,
-                          propertyTitle: property.title,
-                          buyerId: user.emailOrPhone,
-                          buyerName: user.name,
-                          ownerId: property.ownerEmailOrPhone || property.agentId,
-                          amount: Number(offerAmount),
-                          message: offerMessage
-                        })
-                      });
-                      window.alert('تم إرسال العرض بنجاح!');
-                      setShowOfferModal(false);
-                    } catch(e) {}
-                  }} className="flex-1 bg-gold-prestige hover:bg-[#d66b1d] text-slate-900 py-2 rounded-lg text-sm font-bold transition-all">
+                  <button onClick={handleOfferSubmit} className="flex-1 bg-gold-prestige hover:bg-[#d66b1d] text-slate-900 py-2 rounded-lg text-sm font-bold transition-all">
                     تأكيد العرض
                   </button>
                   <button onClick={() => setShowOfferModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all">
@@ -1013,24 +1043,7 @@ export default function PropertyDetails({
                   </div>
                 </div>
                 <div className="flex gap-2 pt-4">
-                  <button onClick={async () => {
-                    if (!complaintSubject || !complaintDesc) return;
-                    try {
-                      await fetch('/api/complaints', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-user-id': user?.emailOrPhone || 'guest' },
-                        body: JSON.stringify({
-                          reporterId: user?.emailOrPhone || 'guest',
-                          reporterName: user?.name || 'Guest',
-                          targetId: property.id,
-                          subject: complaintSubject,
-                          description: complaintDesc
-                        })
-                      });
-                      window.alert('تم إرسال البلاغ إلى الإدارة.');
-                      setShowComplaintModal(false);
-                    } catch(e) {}
-                  }} className="flex-1 bg-red-600 hover:bg-red-500 text-[#ffffff] py-2 rounded-lg text-sm font-bold transition-all">
+                  <button onClick={handleComplaintSubmit} className="flex-1 bg-red-600 hover:bg-red-500 text-[#ffffff] py-2 rounded-lg text-sm font-bold transition-all">
                     إرسال البلاغ
                   </button>
                   <button onClick={() => setShowComplaintModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all">

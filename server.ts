@@ -7,6 +7,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -25,6 +26,54 @@ const app = express();
 
 app.set("trust proxy", 1);
 const PORT = 3000;
+
+function getServerSupabase() {
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error('Supabase server credentials are missing (SUPABASE_URL and key).');
+  }
+
+  return createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+function inferPaymentType(packageName?: string, paymentType?: string): 'featured_ad' | 'auction' | 'electronic_agreement' {
+  if (paymentType === 'featured_ad' || paymentType === 'auction' || paymentType === 'electronic_agreement') {
+    return paymentType;
+  }
+
+  if (packageName === 'auction_entry') return 'auction';
+  if (packageName === 'agreement_fee') return 'electronic_agreement';
+  return 'featured_ad';
+}
+
+function normalizePaymentRow(row: any): PaymentProof {
+  const packageName = row.packageName ?? row.package_name ?? '';
+  return {
+    id: row.id,
+    propertyId: row.propertyId ?? row.property_id ?? '',
+    packageName,
+    paymentType: inferPaymentType(packageName, row.paymentType ?? row.payment_type),
+    amount: Number(row.amount ?? 0),
+    paymentMethod: row.paymentMethod ?? row.payment_method,
+    proofImage: row.proofImage ?? row.proof_image ?? '',
+    senderName: row.senderName ?? row.sender_name ?? '',
+    senderPhone: row.senderPhone ?? row.sender_phone ?? '',
+    transactionId: row.transactionId ?? row.transaction_id ?? undefined,
+    status: row.status,
+    rejectionReason: row.rejectionReason ?? row.rejection_reason ?? undefined,
+    createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+  } as PaymentProof;
+}
 
 // Enforce HTTPS in production
 app.use((req, res, next) => {
@@ -913,76 +962,183 @@ app.put('/api/messages/:id/read', requireAuth, async (req, res) => {
 
 
 app.get('/api/payments', async (req, res) => {
-  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
-  const userId = req.headers['x-user-id'] as string;
-  const payments = await db.payments.getAll();
+  try {
+    const supabase = getServerSupabase();
+    const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
+    const userId = req.headers['x-user-id'] as string;
 
-  if (isAdmin) {
-    return res.json(payments);
+    const paymentsResult = await supabase.from('payments').select('*');
+    if (paymentsResult.error) {
+      throw paymentsResult.error;
+    }
+
+    const payments = (paymentsResult.data || []).map(normalizePaymentRow);
+
+    if (isAdmin) {
+      return res.json(payments);
+    }
+
+    if (!userId) {
+      return res.json([]);
+    }
+
+    const propertiesResult = await supabase.from('properties').select('*');
+    if (propertiesResult.error) {
+      throw propertiesResult.error;
+    }
+
+    const userPropIds = (propertiesResult.data || [])
+      .filter((p: any) => {
+        const owner = p.ownerEmailOrPhone ?? p.owner_email_or_phone;
+        return typeof owner === 'string' && owner.toLowerCase() === userId.toLowerCase();
+      })
+      .map((p: any) => p.id);
+
+    const userPayments = payments.filter((p) => userPropIds.includes(p.propertyId));
+    res.json(userPayments);
+  } catch (error: any) {
+    console.error('[payments:get] failed', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch payments' });
   }
-
-  if (!userId) {
-    return res.json([]);
-  }
-
-  const props = await db.properties.getAll();
-  const userProps = props.filter(p => p.ownerEmailOrPhone && p.ownerEmailOrPhone.toLowerCase() === userId.toLowerCase());
-  const userPropIds = userProps.map(p => p.id);
-  
-  const userPayments = payments.filter(p => userPropIds.includes(p.propertyId));
-  res.json(userPayments);
 });
 
 app.post('/api/payments', requireAuth, async (req, res) => {
-  const newProof: PaymentProof = {
-    ...req.body,
-    id: 'pay-' + Date.now(),
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
-  await db.payments.add(newProof);
-  res.status(201).json(newProof);
+  try {
+    const supabase = getServerSupabase();
+    const createdAt = new Date().toISOString();
+    const packageName = req.body.packageName;
+    const paymentType = inferPaymentType(packageName, req.body.paymentType);
+    const newProof: PaymentProof = {
+      ...req.body,
+      id: req.body.id || ('pay-' + Date.now()),
+      paymentType,
+      status: 'pending',
+      createdAt,
+    };
+
+    let insertResult = await supabase
+      .from('payments')
+      .insert(newProof as any)
+      .select('*')
+      .single();
+
+    if (insertResult.error && /column .* does not exist/i.test(insertResult.error.message)) {
+      insertResult = await supabase
+        .from('payments')
+        .insert({
+          id: newProof.id,
+          property_id: newProof.propertyId,
+          package_name: newProof.packageName,
+          payment_type: newProof.paymentType,
+          amount: newProof.amount,
+          payment_method: newProof.paymentMethod,
+          proof_image: newProof.proofImage,
+          sender_name: newProof.senderName,
+          sender_phone: newProof.senderPhone,
+          transaction_id: newProof.transactionId ?? null,
+          status: newProof.status,
+          created_at: newProof.createdAt,
+        } as any)
+        .select('*')
+        .single();
+    }
+
+    if (insertResult.error) {
+      throw insertResult.error;
+    }
+
+    res.status(201).json(normalizePaymentRow(insertResult.data));
+  } catch (error: any) {
+    console.error('[payments:post] failed', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to submit payment proof' });
+  }
 });
 
 app.put('/api/payments/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const supabase = getServerSupabase();
     const { status, propertyId, packageName, rejectionReason } = req.body;
-  const payment = await db.payments.getById(req.params.id);
-  
-  if (payment) {
-    const updates: any = { status };
-    if (rejectionReason) updates.rejectionReason = rejectionReason;
-    
-    await db.payments.update(payment.id!, updates);
-    Object.assign(payment, updates);
-    
-    if (status === 'approved') {
-      if (packageName === 'auction_entry') {
-        const participant = {
-          id: 'part-' + Date.now(),
-          propertyId: propertyId,
-          userId: payment.senderPhone, // or some identifier from payment
-          paidAmount: payment.amount,
-          paymentMethod: payment.paymentMethod,
-          status: 'approved',
-          createdAt: new Date().toISOString()
-        };
-        await db.auctionParticipants.add(participant);
-      } else {
-        const prop = await db.properties.getById(propertyId);
-        if (prop) {
-          await db.properties.update(prop.id!, {
+
+    let paymentResult = await supabase
+      .from('payments')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (paymentResult.error) {
+      throw paymentResult.error;
+    }
+
+    const payment = normalizePaymentRow(paymentResult.data);
+    const paymentUpdates: Record<string, any> = {
+      status,
+      rejectionReason: rejectionReason || null,
+    };
+
+    let updatePaymentResult = await supabase
+      .from('payments')
+      .update(paymentUpdates)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (updatePaymentResult.error && /column .* does not exist/i.test(updatePaymentResult.error.message)) {
+      updatePaymentResult = await supabase
+        .from('payments')
+        .update({
+          status,
+          rejection_reason: rejectionReason || null,
+        } as any)
+        .eq('id', req.params.id)
+        .select('*')
+        .single();
+    }
+
+    if (updatePaymentResult.error) {
+      throw updatePaymentResult.error;
+    }
+
+    if (status === 'approved' && propertyId) {
+      const isPromotion = packageName !== 'auction_entry';
+      if (isPromotion) {
+        let updatePropertyResult = await supabase
+          .from('properties')
+          .update({
             isFeatured: true,
             status: 'مميز',
             featuredPackage: packageName,
-            isApproved: true
-          });
+            isApproved: true,
+            updatedAt: new Date().toISOString(),
+          } as any)
+          .eq('id', propertyId)
+          .select('id')
+          .single();
+
+        if (updatePropertyResult.error && /column .* does not exist/i.test(updatePropertyResult.error.message)) {
+          updatePropertyResult = await supabase
+            .from('properties')
+            .update({
+              is_featured: true,
+              status: 'مميز',
+              featured_package: packageName,
+              is_approved: true,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq('id', propertyId)
+            .select('id')
+            .single();
+        }
+
+        if (updatePropertyResult.error) {
+          throw updatePropertyResult.error;
         }
       }
     }
-    
-    res.json(payment);
-  } else {
-    res.status(404).json({ error: 'Payment record not found' });
+
+    res.json(normalizePaymentRow(updatePaymentResult.data));
+  } catch (error: any) {
+    console.error('[payments:status] failed', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to update payment status' });
   }
 });
 

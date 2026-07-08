@@ -742,6 +742,52 @@ export default function AdminPortal({
               </button>
             )}
 
+            {/* Offers Inbox */}
+            {(!adminUser?.isSupervisor ||
+              adminUser?.permissions?.manageInbox) && (
+              <button
+                onClick={() => setAdminView("offers")}
+                className={`w-full flex items-center justify-between rounded-lg px-4 py-3 font-semibold transition-all ${
+                  adminView === "offers"
+                    ? "bg-white/5 text-gold-prestige"
+                    : "text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  <span>عروض الشراء</span>
+                </div>
+                {offers.filter((o) => o.status === "pending").length > 0 && (
+                  <span className="bg-slate-900 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold text-[9px]">
+                    {offers.filter((o) => o.status === "pending").length}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Complaints Center */}
+            {(!adminUser?.isSupervisor ||
+              adminUser?.permissions?.manageInbox) && (
+              <button
+                onClick={() => setAdminView("complaints")}
+                className={`w-full flex items-center justify-between rounded-lg px-4 py-3 font-semibold transition-all ${
+                  adminView === "complaints"
+                    ? "bg-white/5 text-gold-prestige"
+                    : "text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>الشكاوى والبلاغات</span>
+                </div>
+                {complaints.filter((c) => c.status === "open").length > 0 && (
+                  <span className="bg-rose-500 text-[#ffffff] px-2 py-0.5 rounded-full font-mono font-bold text-[9px]">
+                    {complaints.filter((c) => c.status === "open").length}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Featured Packages payments proof (Perm check) */}
             {(!adminUser?.isSupervisor ||
               adminUser?.permissions?.managePayments) && (

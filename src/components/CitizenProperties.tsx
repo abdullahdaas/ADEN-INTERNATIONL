@@ -387,6 +387,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
       const payload = {
         propertyId: selectedProp.id,
         packageName: selectedPackage,
+        paymentType: 'featured_ad' as const,
         amount: packagesInfo[selectedPackage].price,
         paymentMethod,
         proofImage,

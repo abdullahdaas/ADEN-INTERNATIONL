@@ -413,7 +413,11 @@ export default function ServiceProvidersList({
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    await submitProviderApplication({ ...appForm, status: 'pending', createdAt: new Date().toISOString() });
+                    const payload = { ...appForm, status: 'pending', createdAt: new Date().toISOString() };
+                    const response = await submitProviderApplication(payload);
+                    if (!response?.success) {
+                      throw new Error(response?.message || 'Provider application submission failed');
+                    }
                     alert('تم تقديم طلبك بنجاح. سيتم التواصل معك قريباً.');
                     setShowAppModal(false);
                     setAppForm({
@@ -428,7 +432,14 @@ export default function ServiceProvidersList({
                       address: '',
                       details: ''
                     });
-                  } catch(e) { alert('خطأ في إرسال الطلب'); }
+                  } catch (e) {
+                    console.error('[ServiceProvidersList] submitProviderApplication failed', {
+                      error: e,
+                      message: e instanceof Error ? e.message : String(e),
+                      payload: appForm,
+                    });
+                    alert('خطأ في إرسال الطلب');
+                  }
                   setIsSubmitting(false);
                 }}
                 className="flex-1 bg-[#F27D26] hover:bg-[#d96a1a] text-white py-3 rounded-xl font-bold transition-all disabled:opacity-50"
