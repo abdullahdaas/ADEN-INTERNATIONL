@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Search,
   Download,
   ShieldAlert,
@@ -50,7 +50,10 @@ import {
   fetchAgreements,
   updateAgreementStatus,
   fetchServiceProviders, addServiceProvider, updateServiceProvider, deleteServiceProvider, fetchProviderApplications, updateProviderApplication,
-  fetchStats,
+  buildMarketStats,
+  fetchLatestDeals,
+  buildIraqiMarketIndicators,
+  buildMostActiveAreas,
   fetchSupervisors,
   createSupervisor,
   deleteSupervisor,
@@ -63,6 +66,7 @@ import {
   fetchComplaints, fetchSettings,
   updateOffer,
   updateComplaint,
+  subscribeToSupabaseTables,
 } from "../utils/api";
 import { formatPrice } from "./PropertyCard";
 import { IRAQ_LOCATIONS } from "../data/iraqLocations";
@@ -180,6 +184,7 @@ export default function AdminPortal({
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [payments, setPayments] = useState<PaymentProof[]>([]);
   const [deals, setDeals] = useState<CompletedDeal[]>([]);
+  const [latestDeals, setLatestDeals] = useState<CompletedDeal[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [locations, setLocations] =
     useState<LocationHierarchy[]>(IRAQ_LOCATIONS);
@@ -198,6 +203,14 @@ export default function AdminPortal({
     pendingPayments: 0,
   });
 
+  const marketIndicators = useMemo(() => {
+    return buildIraqiMarketIndicators(properties, deals);
+  }, [properties, deals]);
+
+  const mostActiveAreas = useMemo(() => {
+    return buildMostActiveAreas(properties, 5);
+  }, [properties]);
+
   const loadAdminData = async () => {
     try {
       const allProps = await fetchProperties({ isApproved: "all" }); // Fetch ALL including pending and active
@@ -212,14 +225,18 @@ export default function AdminPortal({
       ]);
       setServiceProviders(provs);
       setProviderApplications(apps);
-      const allDeals = await fetchDeals();
-      const currentStats = await fetchStats();
+      const [allDeals, recentDeals] = await Promise.all([
+        fetchDeals(),
+        fetchLatestDeals(8),
+      ]);
+      const currentStats = buildMarketStats(allProps, allDeals);
       try { const s = await fetchSettings(); setSettings(s); } catch (e) {}
 
       setProperties(allProps);
       setMessages(allMsgs);
       setPayments(allPays);
       setDeals(allDeals);
+      setLatestDeals(recentDeals);
       setStats(currentStats);
 
       try {
@@ -275,6 +292,16 @@ export default function AdminPortal({
     if (isAuthenticated) {
       loadAdminData();
     }
+  }, [isAuthenticated, adminView]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const unsubscribe = subscribeToSupabaseTables(["properties", "deals"], () => {
+      void loadAdminData();
+    });
+
+    return unsubscribe;
   }, [isAuthenticated, adminView]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -1045,14 +1072,14 @@ export default function AdminPortal({
               </div>
             </div>
 
-            {/* Live Operations / Completed deals logs */}
+            {/* Latest Real Estate Deals */}
             <div className="rounded-2xl border border-white/5 bg-slate-900/10 backdrop-blur-md p-6 space-y-4">
               <h3 className="text-sm font-bold text-white border-b border-white/5 pb-3">
                 تأريخ العمليات والصفقات المكتملة
               </h3>
 
               <div className="space-y-3 font-sans">
-                {deals?.map((deal) => (
+                {latestDeals?.map((deal) => (
                   <div
                     key={deal.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950/40 border border-white/5 text-xs text-slate-300 gap-2"
@@ -1081,7 +1108,7 @@ export default function AdminPortal({
                     </div>
                   </div>
                 ))}
-                {deals.length === 0 && (
+                {latestDeals.length === 0 && (
                   <p className="text-xs text-slate-500 text-center">
                     لا توجد صفقات مكتملة مسجلة بعد.
                   </p>
@@ -2274,33 +2301,17 @@ export default function AdminPortal({
                   أكثر المحافظات نشاطاً
                 </h3>
                 <div className="space-y-2 text-xs">
-                  {(() => {
-                    const govCounts: Record<string, number> = {};
-                    let total = 0;
-                    properties.forEach(p => {
-                      govCounts[p.governorate] = (govCounts[p.governorate] || 0) + 1;
-                      total++;
-                    });
-                    deals.forEach(d => {
-                      govCounts[d.governorate] = (govCounts[d.governorate] || 0) + 1;
-                      total++;
-                    });
-                    const sortedGovs = Object.entries(govCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-                    
-                    if (sortedGovs.length === 0) {
-                      return <div className="text-slate-500 py-4 text-center">لا توجد بيانات كافية لعرض المحافظات النشطة.</div>;
-                    }
-
-                    return sortedGovs.map(([gov, count], idx) => {
-                      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                      return (
-                        <div key={idx} className="flex justify-between items-center p-2 hover:bg-white/5 rounded transition-colors">
-                          <span className="text-slate-300 font-bold">{gov}</span>
-                          <span className="font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">{percent}%</span>
-                        </div>
-                      );
-                    });
-                  })()}
+                  {mostActiveAreas.length === 0 && (
+                    <div className="text-slate-500 py-4 text-center">لا توجد بيانات كافية لعرض المحافظات النشطة.</div>
+                  )}
+                  {mostActiveAreas.map((area, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-2 hover:bg-white/5 rounded transition-colors">
+                      <span className="text-slate-300 font-bold">{area.area}</span>
+                      <span className="font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+                        {properties.length > 0 ? Math.round((area.listingsCount / properties.length) * 100) : 0}%
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -2309,32 +2320,28 @@ export default function AdminPortal({
                   تقارير الأداء الحقيقية
                 </h3>
                 <div className="space-y-3 text-xs">
-                  {(() => {
-                    const activeConversion = properties.length > 0 ? Math.min(100, Math.round((deals.length / properties.length) * 100)) : 0;
-                    const engagementRate = visits.length > 0 ? Math.min(100, Math.round(((offers.length + messages.length) / visits.length) * 100)) : 0;
-                    const activePropsPercent = properties.length > 0 ? Math.round((properties.filter(p => p.isApproved && !p.isSuspended).length / properties.length) * 100) : 0;
-
-                    return (
-                      <>
-                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
-                          <span className="text-slate-300">
-                            معدل تفاعل الزوار الحقيقي
-                          </span>
-                          <span className="font-mono text-[#F27D26] font-bold">{engagementRate}%</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
-                          <span className="text-slate-300">
-                            معدل التحويل (صفقات منجزة للكل)
-                          </span>
-                          <span className="font-mono text-emerald-400 font-bold">{activeConversion}%</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
-                          <span className="text-slate-300">نسبة العقارات المنشورة الفعالة</span>
-                          <span className="font-mono text-blue-400 font-bold">{activePropsPercent}%</span>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                    <span className="text-slate-300">
+                      معدل تفاعل الزوار الحقيقي
+                    </span>
+                    <span className="font-mono text-[#F27D26] font-bold">
+                      {marketIndicators.totalListings > 0 ? Math.min(100, Math.round((marketIndicators.totalDeals / marketIndicators.totalListings) * 100)) : 0}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                    <span className="text-slate-300">
+                      معدل التحويل (صفقات منجزة للكل)
+                    </span>
+                    <span className="font-mono text-emerald-400 font-bold">
+                      {marketIndicators.totalListings > 0 ? Math.min(100, Math.round((marketIndicators.totalDeals / marketIndicators.totalListings) * 100)) : 0}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-white/5 rounded border border-white/5">
+                    <span className="text-slate-300">نسبة العقارات المنشورة الفعالة</span>
+                    <span className="font-mono text-blue-400 font-bold">
+                      {properties.length > 0 ? Math.round((properties.filter(p => p.isApproved && !p.isSuspended).length / properties.length) * 100) : 0}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

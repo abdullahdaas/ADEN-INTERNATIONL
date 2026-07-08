@@ -5,7 +5,7 @@ import {
   MapPin, Eye, Building, Plus, X, Globe, Phone, MessageSquare
 } from 'lucide-react';
 import { Property, PaymentProof, CitizenProfile } from '../types';
-import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments } from '../utils/api';
+import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments, subscribeToSupabaseTables } from '../utils/api';
 import { IRAQ_LOCATIONS } from '../data/iraqLocations';
 import { batchUploadToSpaces } from '../data/spacesClient';
 import { SmartLocationPicker } from './SmartLocationPicker';
@@ -205,6 +205,16 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
       loadProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.emailOrPhone) return;
+
+    const unsubscribe = subscribeToSupabaseTables(["properties"], () => {
+      void loadMyProperties();
+    });
+
+    return unsubscribe;
+  }, [user?.emailOrPhone]);
 
   // Sync Districts list based on Governorate
   

@@ -1,6 +1,450 @@
 import { Property, Agent, CompletedDeal, ContactMessage, PaymentProof, MarketIndicator, Supervisor, CitizenProfile, UserNotification } from '../types';
+import { getSupabase } from '../data/supabaseStorage';
 
 const API_BASE = '/api';
+
+const DEFAULT_STATS = {
+  activeCount: 0,
+  pendingCount: 0,
+  soldCount: 0,
+  rentedCount: 0,
+  avgDaysToSell: 0,
+  avgDaysToRent: 0,
+  highestSale: 0,
+  highestRent: 0,
+  activeRegions: [] as { name: string; count: number }[],
+  governorateStats: [] as MarketIndicator[],
+};
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function toBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return fallback;
+}
+
+function toStringValue(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+  }
+  if (typeof value === 'string' && value.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed)
+        ? parsed.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0)
+        : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function toDocuments(value: unknown): { title: string; url: string; isPublic: boolean }[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const doc = entry as Record<string, unknown>;
+        return {
+          title: toStringValue(doc.title),
+          url: toStringValue(doc.url),
+          isPublic: toBoolean(doc.isPublic),
+        };
+      })
+      .filter((entry): entry is { title: string; url: string; isPublic: boolean } => !!entry && !!entry.url);
+  }
+  if (typeof value === 'string' && value.trim().startsWith('[')) {
+    try {
+      return toDocuments(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function toCoordinates(row: Record<string, unknown>): { lat: number; lng: number } {
+  const coordinates = row.coordinates as Record<string, unknown> | undefined;
+  const lat = toNumber(coordinates?.lat ?? row.lat ?? row.latitude);
+  const lng = toNumber(coordinates?.lng ?? row.lng ?? row.longitude);
+  return { lat, lng };
+}
+
+function daysSince(dateValue: string): number {
+  if (!dateValue) return 0;
+  const timestamp = new Date(dateValue).getTime();
+  if (Number.isNaN(timestamp)) return 0;
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 86400000));
+}
+
+function normalizeProperty(row: any): Property {
+  const createdAt = toStringValue(row.createdAt ?? row.created_at, new Date().toISOString());
+  const updatedAt = toStringValue(row.updatedAt ?? row.updated_at, createdAt);
+  return {
+    id: toStringValue(row.id, crypto.randomUUID()),
+    title: toStringValue(row.title),
+    description: toStringValue(row.description),
+    price: toNumber(row.price),
+    space: toNumber(row.space),
+    status: (row.status ?? 'للبيع') as Property['status'],
+    isFeatured: toBoolean(row.isFeatured ?? row.is_featured),
+    isSuspended: toBoolean(row.isSuspended ?? row.is_suspended),
+    featuredPackage: toStringValue(row.featuredPackage ?? row.featured_package) || undefined,
+    country: toStringValue(row.country) || undefined,
+    governorate: toStringValue(row.governorate),
+    district: toStringValue(row.district),
+    subDistrict: toStringValue(row.subDistrict ?? row.sub_district),
+    city: toStringValue(row.city) || undefined,
+    neighborhood: toStringValue(row.neighborhood),
+    village: toStringValue(row.village) || undefined,
+    street: toStringValue(row.street) || undefined,
+    nearestLandmark: toStringValue(row.nearestLandmark ?? row.nearest_landmark) || undefined,
+    postalCode: toStringValue(row.postalCode ?? row.postal_code) || undefined,
+    address: toStringValue(row.address),
+    coordinates: toCoordinates(row),
+    googleMapsUrl: toStringValue(row.googleMapsUrl ?? row.google_maps_url) || undefined,
+    locationTimestamp: toStringValue(row.locationTimestamp ?? row.location_timestamp) || undefined,
+    bedrooms: toNumber(row.bedrooms),
+    bathrooms: toNumber(row.bathrooms),
+    livingRooms: toNumber(row.livingRooms ?? row.living_rooms),
+    floors: toNumber(row.floors),
+    isFurnished: toBoolean(row.isFurnished ?? row.is_furnished),
+    hasGarage: toBoolean(row.hasGarage ?? row.has_garage),
+    hasGarden: toBoolean(row.hasGarden ?? row.has_garden),
+    hasElevator: toBoolean(row.hasElevator ?? row.has_elevator),
+    hasGenerator: toBoolean(row.hasGenerator ?? row.has_generator),
+    hasSolarPower: toBoolean(row.hasSolarPower ?? row.has_solar_power),
+    hasPool: toBoolean(row.hasPool ?? row.has_pool),
+    buildingType: toStringValue(row.buildingType ?? row.building_type),
+    constructionYear: toNumber(row.constructionYear ?? row.construction_year),
+    images: toStringArray(row.images),
+    videoUrl: toStringValue(row.videoUrl ?? row.video_url) || undefined,
+    agentId: toStringValue(row.agentId ?? row.agent_id),
+    advertiserName: toStringValue(row.advertiserName ?? row.advertiser_name) || undefined,
+    advertiserPhone: toStringValue(row.advertiserPhone ?? row.advertiser_phone) || undefined,
+    advertiserWhatsapp: toStringValue(row.advertiserWhatsapp ?? row.advertiser_whatsapp) || undefined,
+    ownerEmailOrPhone: toStringValue(row.ownerEmailOrPhone ?? row.owner_email_or_phone) || undefined,
+    views: toNumber(row.views),
+    favoritesCount: toNumber(row.favoritesCount ?? row.favorites_count),
+    createdAt,
+    updatedAt,
+    daysOnPlatform: toNumber(row.daysOnPlatform ?? row.days_on_platform, daysSince(createdAt)),
+    isApproved: toBoolean(row.isApproved ?? row.is_approved),
+    isVerified: toBoolean(row.isVerified ?? row.is_verified),
+    phoneViews: toNumber(row.phoneViews ?? row.phone_views),
+    pendingDeletion: toBoolean(row.pendingDeletion ?? row.pending_deletion),
+    documents: toDocuments(row.documents),
+    isAuction: toBoolean(row.isAuction ?? row.is_auction),
+    auctionStart: toStringValue(row.auctionStart ?? row.auction_start) || undefined,
+    auctionEnd: toStringValue(row.auctionEnd ?? row.auction_end) || undefined,
+    startingPrice: toNumber(row.startingPrice ?? row.starting_price),
+    highestBid: toNumber(row.highestBid ?? row.highest_bid),
+    highestBidderId: toStringValue(row.highestBidderId ?? row.highest_bidder_id) || undefined,
+    isAuctionActive: toBoolean(row.isAuctionActive ?? row.is_auction_active),
+  };
+}
+
+function normalizeDeal(row: any): CompletedDeal {
+  return {
+    id: toStringValue(row.id, crypto.randomUUID()),
+    propertyTitle: toStringValue(row.propertyTitle ?? row.property_title),
+    propertyType: toStringValue(row.propertyType ?? row.property_type),
+    governorate: toStringValue(row.governorate),
+    district: toStringValue(row.district),
+    neighborhood: toStringValue(row.neighborhood),
+    price: toNumber(row.price),
+    type: (row.type ?? 'بيع') as CompletedDeal['type'],
+    daysToComplete: toNumber(row.daysToComplete ?? row.days_to_complete),
+    date: toStringValue(row.date, toStringValue(row.createdAt ?? row.created_at)),
+  };
+}
+
+function getDealTimestamp(deal: CompletedDeal): number {
+  const raw = deal.date;
+  if (!raw) return 0;
+  const ts = new Date(raw).getTime();
+  return Number.isNaN(ts) ? 0 : ts;
+}
+
+function applyPropertyFilters(query: any, filters: Record<string, any>) {
+  let nextQuery = query;
+  const equalityKeys = [
+    'status',
+    'governorate',
+    'district',
+    'subDistrict',
+    'neighborhood',
+    'buildingType',
+    'bedrooms',
+    'bathrooms',
+    'isFurnished',
+    'hasGarage',
+    'hasGarden',
+    'hasElevator',
+    'hasGenerator',
+    'hasSolarPower',
+    'hasPool',
+    'ownerEmailOrPhone',
+  ];
+
+  for (const key of equalityKeys) {
+    const value = filters[key];
+    if (value !== undefined && value !== null && value !== '') {
+      nextQuery = nextQuery.eq(key, value);
+    }
+  }
+
+  if (filters.isApproved !== 'all') {
+    if (filters.isApproved === true || filters.isApproved === 'true') {
+      nextQuery = nextQuery.eq('isApproved', true);
+    } else if (filters.isApproved === false || filters.isApproved === 'false') {
+      nextQuery = nextQuery.eq('isApproved', false);
+    }
+  }
+
+  if (filters.minPrice !== undefined && filters.minPrice !== '') {
+    nextQuery = nextQuery.gte('price', Number(filters.minPrice));
+  }
+  if (filters.maxPrice !== undefined && filters.maxPrice !== '') {
+    nextQuery = nextQuery.lte('price', Number(filters.maxPrice));
+  }
+  if (filters.minSpace !== undefined && filters.minSpace !== '') {
+    nextQuery = nextQuery.gte('space', Number(filters.minSpace));
+  }
+  if (filters.maxSpace !== undefined && filters.maxSpace !== '') {
+    nextQuery = nextQuery.lte('space', Number(filters.maxSpace));
+  }
+  if (filters.searchQuery) {
+    const term = String(filters.searchQuery).trim();
+    if (term) {
+      nextQuery = nextQuery.or([
+        `title.ilike.%${term}%`,
+        `description.ilike.%${term}%`,
+        `address.ilike.%${term}%`,
+        `district.ilike.%${term}%`,
+        `neighborhood.ilike.%${term}%`,
+      ].join(','));
+    }
+  }
+
+  return nextQuery;
+}
+
+function preparePropertyForWrite(property: Partial<Property>): Record<string, any> {
+  const next: Record<string, any> = { ...property };
+  if (property.coordinates) {
+    next.coordinates = {
+      lat: toNumber(property.coordinates.lat),
+      lng: toNumber(property.coordinates.lng),
+    };
+  }
+  if (property.images) {
+    next.images = property.images.filter((image) => typeof image === 'string' && image.length > 0);
+  }
+  if (property.documents) {
+    next.documents = property.documents;
+  }
+  return next;
+}
+
+async function fetchPropertiesFromSupabase(filters: Record<string, any> = {}): Promise<Property[]> {
+  let query = getSupabase().from('properties').select('*');
+  query = applyPropertyFilters(query, filters);
+  const { data, error } = await query.order('createdAt', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(normalizeProperty);
+}
+
+async function fetchDealsFromSupabase(): Promise<CompletedDeal[]> {
+  const { data, error } = await getSupabase()
+    .from('deals')
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(normalizeDeal);
+}
+
+export async function fetchLatestDeals(limit = 5): Promise<CompletedDeal[]> {
+  const safeLimit = Math.max(1, Math.min(50, limit));
+  const deals = await fetchDealsFromSupabase();
+  return deals
+    .sort((left, right) => getDealTimestamp(right) - getDealTimestamp(left))
+    .slice(0, safeLimit);
+}
+
+export function buildIraqiMarketIndicators(
+  properties: Property[] = [],
+  deals: CompletedDeal[] = [],
+): {
+  totalListings: number;
+  totalDeals: number;
+  totalDealsVolume: number;
+  averageListingPrice: number;
+  averageDealPrice: number;
+  saleDealsVolume: number;
+  rentDealsVolume: number;
+} {
+  const totalListings = properties.length;
+  const totalDeals = deals.length;
+  const totalDealsVolume = deals.reduce((sum, deal) => sum + (deal.price || 0), 0);
+  const averageListingPrice =
+    totalListings > 0
+      ? Math.round(properties.reduce((sum, property) => sum + (property.price || 0), 0) / totalListings)
+      : 0;
+  const averageDealPrice = totalDeals > 0 ? Math.round(totalDealsVolume / totalDeals) : 0;
+  const saleDealsVolume = deals
+    .filter((deal) => deal.type === 'بيع')
+    .reduce((sum, deal) => sum + (deal.price || 0), 0);
+  const rentDealsVolume = deals
+    .filter((deal) => deal.type === 'تأجير')
+    .reduce((sum, deal) => sum + (deal.price || 0), 0);
+
+  return {
+    totalListings,
+    totalDeals,
+    totalDealsVolume,
+    averageListingPrice,
+    averageDealPrice,
+    saleDealsVolume,
+    rentDealsVolume,
+  };
+}
+
+export function buildMostActiveAreas(
+  properties: Property[] = [],
+  limit = 5,
+): { area: string; listingsCount: number }[] {
+  const safeLimit = Math.max(1, Math.min(20, limit));
+  const counter = new Map<string, number>();
+
+  for (const property of properties) {
+    const area = [property.governorate, property.district]
+      .filter(Boolean)
+      .join(' • ')
+      .trim();
+    const key = area || 'Unknown Area';
+    counter.set(key, (counter.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(counter.entries())
+    .map(([area, listingsCount]) => ({ area, listingsCount }))
+    .sort((left, right) => right.listingsCount - left.listingsCount)
+    .slice(0, safeLimit);
+}
+
+export function buildMarketStats(
+  properties: Property[] = [],
+  deals: CompletedDeal[] = [],
+): {
+  activeCount: number;
+  pendingCount: number;
+  soldCount: number;
+  rentedCount: number;
+  avgDaysToSell: number;
+  avgDaysToRent: number;
+  highestSale: number;
+  highestRent: number;
+  activeRegions: { name: string; count: number }[];
+  governorateStats: MarketIndicator[];
+} {
+  if (properties.length === 0 && deals.length === 0) {
+    return { ...DEFAULT_STATS };
+  }
+
+  const soldDeals = deals.filter((deal) => deal.type === 'بيع');
+  const rentedDeals = deals.filter((deal) => deal.type === 'تأجير');
+
+  const governorateMap = new Map<string, {
+    salePrices: number[];
+    rentPrices: number[];
+    soldDays: number[];
+    rentedDays: number[];
+  }>();
+
+  for (const deal of deals) {
+    const bucket = governorateMap.get(deal.governorate) ?? {
+      salePrices: [],
+      rentPrices: [],
+      soldDays: [],
+      rentedDays: [],
+    };
+    if (deal.type === 'بيع') {
+      bucket.salePrices.push(deal.price);
+      bucket.soldDays.push(deal.daysToComplete);
+    } else {
+      bucket.rentPrices.push(deal.price);
+      bucket.rentedDays.push(deal.daysToComplete);
+    }
+    governorateMap.set(deal.governorate, bucket);
+  }
+
+  const activeRegionsMap = new Map<string, number>();
+  for (const deal of deals) {
+    const regionName = [deal.governorate, deal.district, deal.neighborhood].filter(Boolean).join(' • ');
+    activeRegionsMap.set(regionName, (activeRegionsMap.get(regionName) ?? 0) + 1);
+  }
+
+  const governorateStats: MarketIndicator[] = Array.from(governorateMap.entries()).map(([governorate, value]) => ({
+    governorate,
+    avgSalePrice: value.salePrices.length ? Math.round(value.salePrices.reduce((sum, price) => sum + price, 0) / value.salePrices.length) : 0,
+    avgRentPrice: value.rentPrices.length ? Math.round(value.rentPrices.reduce((sum, price) => sum + price, 0) / value.rentPrices.length) : 0,
+    totalSold: value.salePrices.length,
+    totalRented: value.rentPrices.length,
+    avgDaysToSell: value.soldDays.length ? Math.round(value.soldDays.reduce((sum, days) => sum + days, 0) / value.soldDays.length) : 0,
+    avgDaysToRent: value.rentedDays.length ? Math.round(value.rentedDays.reduce((sum, days) => sum + days, 0) / value.rentedDays.length) : 0,
+  }));
+
+  return {
+    activeCount: properties.filter((property) => property.isApproved && !property.pendingDeletion).length,
+    pendingCount: properties.filter((property) => !property.isApproved || property.pendingDeletion).length,
+    soldCount: soldDeals.length,
+    rentedCount: rentedDeals.length,
+    avgDaysToSell: soldDeals.length ? Math.round(soldDeals.reduce((sum, deal) => sum + deal.daysToComplete, 0) / soldDeals.length) : 0,
+    avgDaysToRent: rentedDeals.length ? Math.round(rentedDeals.reduce((sum, deal) => sum + deal.daysToComplete, 0) / rentedDeals.length) : 0,
+    highestSale: soldDeals.length ? Math.max(...soldDeals.map((deal) => deal.price)) : 0,
+    highestRent: rentedDeals.length ? Math.max(...rentedDeals.map((deal) => deal.price)) : 0,
+    activeRegions: Array.from(activeRegionsMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((left, right) => right.count - left.count)
+      .slice(0, 5),
+    governorateStats: governorateStats.sort((left, right) => (right.totalSold + right.totalRented) - (left.totalSold + left.totalRented)),
+  };
+}
+
+export function subscribeToSupabaseTables(
+  tables: string[],
+  onChange: () => void,
+): () => void {
+  const supabase = getSupabase();
+  const channels = tables.map((table, index) =>
+    supabase
+      .channel(`realtime:${table}:${index}:${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, () => onChange())
+      .subscribe(),
+  );
+
+  return () => {
+    for (const channel of channels) {
+      void supabase.removeChannel(channel);
+    }
+  };
+}
 
 export async function loginAdmin(username: string, password: string) {
   const res = await fetch(`${API_BASE}/login`, {
@@ -69,52 +513,48 @@ function getAuthHeadersGET(): HeadersInit {
 }
 
 export async function fetchProperties(filters: Record<string, any> = {}): Promise<Property[]> {
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      params.append(key, String(value));
-    }
-  });
-  
-  const res = await fetch(`${API_BASE}/properties?${params.toString()}`, { headers: getAuthHeadersGET(), cache: "no-store" });
-  if (!res.ok) throw new Error('Failed to fetch properties');
-  return res.json();
+  return fetchPropertiesFromSupabase(filters);
 }
 
 export async function fetchPropertyById(id: string): Promise<Property> {
-  const res = await fetch(`${API_BASE}/properties/${id}`, { headers: getAuthHeadersGET(), cache: "no-store" });
-  if (!res.ok) throw new Error('Failed to fetch property details');
-  return res.json();
+  const { data, error } = await getSupabase().from('properties').select('*').eq('id', id).single();
+  if (error || !data) throw new Error('Failed to fetch property details');
+  return normalizeProperty(data);
 }
 
 export async function createProperty(property: Omit<Property, 'id' | 'views' | 'favoritesCount' | 'createdAt' | 'updatedAt' | 'daysOnPlatform'>): Promise<Property> {
-  const res = await fetch(`${API_BASE}/properties`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(property)
+  const now = new Date().toISOString();
+  const payload = preparePropertyForWrite({
+    ...property,
+    id: crypto.randomUUID(),
+    views: 0,
+    favoritesCount: 0,
+    createdAt: now,
+    updatedAt: now,
+    daysOnPlatform: 0,
   });
-  if (!res.ok) throw new Error('Failed to create property');
-  return res.json();
+  const { data, error } = await getSupabase().from('properties').insert(payload).select('*').single();
+  if (error || !data) throw new Error(error?.message || 'Failed to create property');
+  return normalizeProperty(data);
 }
 
 export async function updateProperty(id: string, property: Partial<Property>): Promise<Property> {
-  const res = await fetch(`${API_BASE}/properties/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(property)
-  });
-  if (!res.ok) { const text = await res.text(); throw new Error('Failed to update property: ' + text); }
-  return res.json();
+  const payload = preparePropertyForWrite({ ...property, updatedAt: new Date().toISOString() });
+  const { data, error } = await getSupabase().from('properties').update(payload).eq('id', id).select('*').single();
+  if (error || !data) throw new Error(error?.message || 'Failed to update property');
+  return normalizeProperty(data);
 }
 
-export async function deleteProperty(id: string, hard = true): Promise<boolean> { console.log('deleteProperty called. Token:', localStorage.getItem('aden-admin-token'), 'Headers:', getAuthHeaders());
-  const res = await fetch(`${API_BASE}/properties/${id}${hard ? '?hard=true' : ''}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) { const text = await res.text(); throw new Error('Failed to delete property: ' + text); }
-  const data = await res.json();
-  return data.success;
+export async function deleteProperty(id: string, hard = true): Promise<boolean> {
+  if (!hard) {
+    const { error } = await getSupabase().from('properties').update({ pendingDeletion: true, isApproved: false, updatedAt: new Date().toISOString() }).eq('id', id);
+    if (error) throw new Error(error.message || 'Failed to mark property for deletion');
+    return true;
+  }
+
+  const { error } = await getSupabase().from('properties').delete().eq('id', id);
+  if (error) throw new Error(error.message || 'Failed to delete property');
+  return true;
 }
 
 export async function fetchAgents(): Promise<Agent[]> {
@@ -130,9 +570,7 @@ export async function fetchAgentById(id: string): Promise<Agent & { properties: 
 }
 
 export async function fetchDeals(): Promise<CompletedDeal[]> {
-  const res = await fetch(`${API_BASE}/deals`, { headers: getAuthHeadersGET(), cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch completed deals');
-  return res.json();
+  return fetchDealsFromSupabase();
 }
 
 export async function fetchMessages(): Promise<ContactMessage[]> {
@@ -198,9 +636,11 @@ export async function fetchStats(): Promise<{
   activeRegions: { name: string; count: number }[];
   governorateStats: MarketIndicator[];
 }> {
-  const res = await fetch(`${API_BASE}/stats`, { headers: getAuthHeadersGET(), cache: "no-store" });
-  if (!res.ok) throw new Error('Failed to fetch statistics');
-  return res.json();
+  const [properties, deals] = await Promise.all([
+    fetchPropertiesFromSupabase({ isApproved: 'all' }),
+    fetchDealsFromSupabase(),
+  ]);
+  return buildMarketStats(properties, deals);
 }
 
 export async function fetchSupervisors(): Promise<Supervisor[]> {

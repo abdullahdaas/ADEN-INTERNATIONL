@@ -51,9 +51,10 @@ import { Property, CompletedDeal, ContactMessage, Agent } from "./types";
 import {
   fetchProperties,
   fetchDeals,
-  fetchStats,
   sendMessage,
   createProperty,
+  buildMarketStats,
+  subscribeToSupabaseTables,
 } from "./utils/api";
 import { IRAQ_LOCATIONS } from "./data/iraqLocations";
 import { translations } from "./utils/translations";
@@ -277,9 +278,31 @@ export default function App() {
     }
   }, [user]);
 
+  const refreshCitizenSubmittedProperties = async () => {
+    if (user?.role !== "citizen" || !user.emailOrPhone) {
+      setCitizenSubmittedProps([]);
+      return;
+    }
+
+    try {
+      const props = await fetchProperties({ isApproved: "all" });
+      const myProps = props.filter(
+        (p) =>
+          p.ownerEmailOrPhone &&
+          p.ownerEmailOrPhone.toLowerCase() === user.emailOrPhone?.toLowerCase(),
+      );
+      setCitizenSubmittedProps(myProps);
+    } catch (error) {
+      console.error("Failed to refresh citizen properties:", error);
+    }
+  };
+
   const loadData = async () => {
     try {
-      const props = await fetchProperties(listingsFilters);
+      const [props, serverDeals] = await Promise.all([
+        fetchProperties(listingsFilters),
+        fetchDeals(),
+      ]);
       setProperties(props);
       
       // Sync dependent lists to ensure deleted items are removed
@@ -295,10 +318,8 @@ export default function App() {
         return synced;
       });
 
-      const serverDeals = await fetchDeals();
       setDeals(serverDeals);
-      const serverStats = await fetchStats();
-      setStats(serverStats);
+      setStats(buildMarketStats(props, serverDeals));
     } catch (err) {
       console.error("Error fetching data from API:", err);
     }
@@ -308,6 +329,19 @@ export default function App() {
   useEffect(() => {
     loadData();
   }, [listingsFilters]);
+
+  useEffect(() => {
+    const refreshAll = async () => {
+      await loadData();
+      await refreshCitizenSubmittedProperties();
+    };
+
+    const unsubscribe = subscribeToSupabaseTables(["properties", "deals"], () => {
+      void refreshAll();
+    });
+
+    return unsubscribe;
+  }, [listingsFilters, user?.role, user?.emailOrPhone]);
 
   // Load configuration and persistent states
   useEffect(() => {
@@ -790,6 +824,10 @@ export default function App() {
     }
   };
 
+  const approvedProperties = properties.filter((property) => property.isApproved);
+  const featuredProperties = approvedProperties.filter((property) => property.isFeatured).slice(0, 3);
+  const latestApprovedProperties = approvedProperties.slice(0, 6);
+
   return (
     <div
       id="aden-app"
@@ -1073,29 +1111,35 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {properties
-                  .filter((p) => p.isFeatured && p.isApproved)
-                  .slice(0, 3)
-                  ?.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      isFavorite={!!favorites.find((f) => f.id === property.id)}
-                      onToggleFavorite={(e) => {
-                        e.stopPropagation();
-                        handleToggleFavorite(property);
-                      }}
-                      onSelect={() => handleSelectProperty(property)}
-                      isComparing={
-                        !!compareList.find((c) => c.id === property.id)
-                      }
-                      onToggleCompare={(e) => {
-                        e.stopPropagation();
-                        handleToggleCompare(property);
-                      }}
-                    />
-                  ))}
+                {featuredProperties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    isFavorite={!!favorites.find((f) => f.id === property.id)}
+                    onToggleFavorite={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(property);
+                    }}
+                    onSelect={() => handleSelectProperty(property)}
+                    isComparing={
+                      !!compareList.find((c) => c.id === property.id)
+                    }
+                    onToggleCompare={(e) => {
+                      e.stopPropagation();
+                      handleToggleCompare(property);
+                    }}
+                  />
+                ))}
               </div>
+              {featuredProperties.length === 0 && (
+                <div className="rounded-2xl border border-white/5 bg-slate-900/10 p-8 text-center text-sm text-slate-400">
+                  {lang === "ar"
+                    ? "لا توجد عقارات مميزة منشورة حالياً."
+                    : lang === "ku"
+                      ? "لە ئێستادا هیچ خانووبەرەیەکی تایبەت بڵاونەکراوەتەوە."
+                      : "No featured properties are currently listed."}
+                </div>
+              )}
             </div>
 
             {/* Dynamic Market Indicators panel */}
@@ -1111,29 +1155,35 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {properties
-                  .filter((p) => p.isApproved)
-                  .slice(0, 6)
-                  ?.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      isFavorite={!!favorites.find((f) => f.id === property.id)}
-                      onToggleFavorite={(e) => {
-                        e.stopPropagation();
-                        handleToggleFavorite(property);
-                      }}
-                      onSelect={() => handleSelectProperty(property)}
-                      isComparing={
-                        !!compareList.find((c) => c.id === property.id)
-                      }
-                      onToggleCompare={(e) => {
-                        e.stopPropagation();
-                        handleToggleCompare(property);
-                      }}
-                    />
-                  ))}
+                {latestApprovedProperties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    isFavorite={!!favorites.find((f) => f.id === property.id)}
+                    onToggleFavorite={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(property);
+                    }}
+                    onSelect={() => handleSelectProperty(property)}
+                    isComparing={
+                      !!compareList.find((c) => c.id === property.id)
+                    }
+                    onToggleCompare={(e) => {
+                      e.stopPropagation();
+                      handleToggleCompare(property);
+                    }}
+                  />
+                ))}
               </div>
+              {latestApprovedProperties.length === 0 && (
+                <div className="rounded-2xl border border-white/5 bg-slate-900/10 p-8 text-center text-sm text-slate-400">
+                  {lang === "ar"
+                    ? "لا توجد عقارات منشورة حالياً."
+                    : lang === "ku"
+                      ? "لە ئێستادا هیچ خانووبەرەیەک بڵاونەکراوەتەوە."
+                      : "No properties currently listed."}
+                </div>
+              )}
             </div>
 
             {/* Live Completed Deals System widget */}
