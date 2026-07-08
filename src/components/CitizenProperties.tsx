@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { Property, PaymentProof, CitizenProfile } from '../types';
 import { fetchProperties, submitPaymentProof, updateProperty, deleteProperty, fetchProfileByIdentity, saveProfile, fetchSettings, fetchPayments, subscribeToSupabaseTables } from '../utils/api';
-import { IRAQ_LOCATIONS } from '../data/iraqLocations';
 import { batchUploadToSpaces } from '../data/spacesClient';
 import { SmartLocationPicker } from './SmartLocationPicker';
 

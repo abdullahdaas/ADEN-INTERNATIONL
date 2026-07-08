@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 import { ServiceProvider } from "../types";
 import { submitProviderApplication, fetchServiceProviders } from "../utils/api";
-import { IRAQ_LOCATIONS } from "../data/iraqLocations";
+import { IRAQ_GOVERNORATES, getDistrictsByGovernorate } from "../data/iraqLocations";
 import { MaterialsProviderForm } from "./MaterialsProviderForm";
 import { CONSTRUCTION_MATERIALS } from "../data/constructionMaterials";
+import { SmartLocationPicker } from "./SmartLocationPicker";
 
 
 
@@ -59,7 +60,18 @@ export default function ServiceProvidersList({
   const [searchTerm, setSearchTerm] = useState("");
   const [showAppModal, setShowAppModal] = useState(false);
   const [showMaterialsModal, setShowMaterialsModal] = useState(false);
-  const [appForm, setAppForm] = useState({ name: '', phone: '', category: '', governorate: '', details: '' });
+  const [appForm, setAppForm] = useState({
+    name: '',
+    phone: '',
+    category: '',
+    governorate: '',
+    district: '',
+    subDistrict: '',
+    locationText: '',
+    mapLink: '',
+    address: '',
+    details: ''
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -94,7 +106,7 @@ export default function ServiceProvidersList({
     return matchesSearch && matchesCategory && matchesGov && matchesDistrict && matchesMaterial && matchesDelivery;
   });
 
-  const selectedGov = IRAQ_LOCATIONS.find(g => g.governorate === govFilter);
+  const districtOptions = govFilter ? getDistrictsByGovernorate(govFilter) : [];
 
   return (
     <div
@@ -188,9 +200,9 @@ export default function ServiceProvidersList({
                 className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
               >
                 <option value="">كل المحافظات</option>
-                {IRAQ_LOCATIONS.map((g) => (
-                  <option key={g.governorate} value={g.governorate}>
-                    {g.governorate}
+                {IRAQ_GOVERNORATES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
                   </option>
                 ))}
               </select>
@@ -204,9 +216,9 @@ export default function ServiceProvidersList({
                   className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#F27D26] outline-none transition-all appearance-none"
                 >
                   <option value="">كل الأقضية</option>
-                  {selectedGov?.districts.map((d) => (
-                    <option key={d.name} value={d.name}>
-                      {d.name}
+                  {districtOptions.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
                     </option>
                   ))}
                 </select>
@@ -348,11 +360,47 @@ export default function ServiceProvidersList({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">المحافظة</label>
-                <select value={appForm.governorate} onChange={e => setAppForm({...appForm, governorate: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#F27D26] outline-none">
-                  <option value="">اختر المحافظة</option>
-                  {IRAQ_LOCATIONS.map(g => <option key={g.governorate} value={g.governorate}>{g.governorate}</option>)}
-                </select>
+                <label className="block text-xs text-slate-400 mb-1">الموقع (نص حر) *</label>
+                <input
+                  type="text"
+                  value={appForm.locationText}
+                  onChange={e => setAppForm({...appForm, locationText: e.target.value})}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#F27D26] outline-none"
+                  placeholder="مثال: بغداد - المنصور - حي الجامعة"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">رابط الموقع على الخريطة *</label>
+                <input
+                  type="text"
+                  value={appForm.mapLink}
+                  onChange={e => setAppForm({...appForm, mapLink: e.target.value})}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-[#F27D26] outline-none"
+                  dir="ltr"
+                  placeholder="https://www.google.com/maps?q=..."
+                />
+              </div>
+              <div className="rounded-xl border border-white/10 p-3 bg-slate-950/40">
+                <p className="text-[11px] text-slate-400 mb-2">حدد موقعك على الخريطة لملء المحافظة والقضاء تلقائياً</p>
+                <SmartLocationPicker
+                  lang={lang as 'ar' | 'en' | 'ku'}
+                  onChange={(loc) => {
+                    if (!loc) return;
+                    setAppForm(prev => ({
+                      ...prev,
+                      governorate: loc.governorate || prev.governorate,
+                      district: loc.district || prev.district,
+                      subDistrict: loc.subDistrict || prev.subDistrict,
+                      address: loc.address || prev.address,
+                      mapLink: loc.googleMapsUrl || prev.mapLink,
+                      locationText:
+                        prev.locationText ||
+                        [loc.governorate, loc.district, loc.subDistrict, loc.neighborhood]
+                          .filter(Boolean)
+                          .join(' - ')
+                    }));
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">تفاصيل إضافية (الخبرة، الأعمال السابقة)</label>
@@ -361,14 +409,25 @@ export default function ServiceProvidersList({
             </div>
             <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3">
               <button 
-                disabled={isSubmitting || !appForm.name || !appForm.phone || !appForm.category || !appForm.governorate}
+                disabled={isSubmitting || !appForm.name || !appForm.phone || !appForm.category || !appForm.locationText || !appForm.mapLink}
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
                     await submitProviderApplication({ ...appForm, status: 'pending', createdAt: new Date().toISOString() });
                     alert('تم تقديم طلبك بنجاح. سيتم التواصل معك قريباً.');
                     setShowAppModal(false);
-                    setAppForm({ name: '', phone: '', category: '', governorate: '', details: '' });
+                    setAppForm({
+                      name: '',
+                      phone: '',
+                      category: '',
+                      governorate: '',
+                      district: '',
+                      subDistrict: '',
+                      locationText: '',
+                      mapLink: '',
+                      address: '',
+                      details: ''
+                    });
                   } catch(e) { alert('خطأ في إرسال الطلب'); }
                   setIsSubmitting(false);
                 }}

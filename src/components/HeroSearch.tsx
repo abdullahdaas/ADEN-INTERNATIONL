@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, SlidersHorizontal, MapPin, Building, Banknote } from 'lucide-react';
-import { IRAQ_LOCATIONS } from '../data/iraqLocations';
+import { IRAQ_GOVERNORATES, getDistrictsByGovernorate } from '../data/iraqLocations';
 
 interface HeroSearchProps {
   onSearch: (filters: Record<string, any>) => void;
@@ -38,9 +38,7 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
   const [neighborhood, setNeighborhood] = useState(initialFilters.neighborhood || '');
 
   // Available options
-  const [availableDistricts, setAvailableDistricts] = useState<{ name: string; subDistricts: any[] }[]>([]);
-  const [availableSubDistricts, setAvailableSubDistricts] = useState<{ name: string; neighborhoods: string[] }[]>([]);
-  const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
 
   // Prices
   const [minPrice, setMinPrice] = useState(initialFilters.minPrice || '');
@@ -66,8 +64,7 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
   // Update lists when Governorate changes
   useEffect(() => {
     if (governorate) {
-      const govObj = IRAQ_LOCATIONS.find(g => g.governorate === governorate);
-      setAvailableDistricts(govObj ? govObj.districts : []);
+      setAvailableDistricts(getDistrictsByGovernorate(governorate));
       // Reset dependent selections
       if (!initialFilters.district) {
         setDistrict('');
@@ -81,36 +78,6 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
       setNeighborhood('');
     }
   }, [governorate]);
-
-  // Update lists when District changes
-  useEffect(() => {
-    if (district && availableDistricts.length > 0) {
-      const distObj = availableDistricts.find(d => d.name === district);
-      setAvailableSubDistricts(distObj ? distObj.subDistricts : []);
-      if (!initialFilters.subDistrict) {
-        setSubDistrict('');
-        setNeighborhood('');
-      }
-    } else {
-      setAvailableSubDistricts([]);
-      setSubDistrict('');
-      setNeighborhood('');
-    }
-  }, [district, availableDistricts]);
-
-  // Update lists when Sub-district changes
-  useEffect(() => {
-    if (subDistrict && availableSubDistricts.length > 0) {
-      const subObj = availableSubDistricts.find(s => s.name === subDistrict);
-      setAvailableNeighborhoods(subObj ? subObj.neighborhoods : []);
-      if (!initialFilters.neighborhood) {
-        setNeighborhood('');
-      }
-    } else {
-      setAvailableNeighborhoods([]);
-      setNeighborhood('');
-    }
-  }, [subDistrict, availableSubDistricts]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -251,8 +218,8 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
               style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`, backgroundPosition: 'left 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
             >
               <option value="">كل المحافظات</option>
-              {IRAQ_LOCATIONS?.map(g => (
-                <option key={g.governorate} value={g.governorate}>{g.governorate}</option>
+              {IRAQ_GOVERNORATES?.map((gov) => (
+                <option key={gov} value={gov}>{gov}</option>
               ))}
             </select>
           </div>
@@ -272,8 +239,8 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
               style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`, backgroundPosition: 'left 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
             >
               <option value="">اختر القضاء</option>
-              {availableDistricts?.map(d => (
-                <option key={d.name} value={d.name}>{d.name}</option>
+              {availableDistricts?.map((dist) => (
+                <option key={dist} value={dist}>{dist}</option>
               ))}
             </select>
           </div>
@@ -310,19 +277,15 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
                 <MapPin className="h-3.5 w-3.5 text-slate-500" />
                 <span>الناحية</span>
               </label>
-              <select
+              <input
                 id="select-subdistrict"
+                type="text"
                 value={subDistrict}
                 onChange={(e) => setSubDistrict(e.target.value)}
                 disabled={!district}
-                className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-base text-white transition-all focus:border-gold-prestige/40 outline-none disabled:opacity-40 appearance-none"
-                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`, backgroundPosition: 'left 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
-              >
-                <option value="">اختر الناحية</option>
-                {availableSubDistricts?.map(s => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
-                ))}
-              </select>
+                placeholder="اكتب اسم الناحية"
+                className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-base text-white transition-all focus:border-gold-prestige/40 outline-none disabled:opacity-40"
+              />
             </div>
 
             {/* Neighborhood (الحي) */}
@@ -331,19 +294,15 @@ export default function HeroSearch({ onSearch, initialFilters = {} }: HeroSearch
                 <MapPin className="h-3.5 w-3.5 text-slate-500" />
                 <span>الحي</span>
               </label>
-              <select
+              <input
                 id="select-neighborhood"
+                type="text"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
                 disabled={!subDistrict}
-                className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-base text-white transition-all focus:border-gold-prestige/40 outline-none disabled:opacity-40 appearance-none"
-                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`, backgroundPosition: 'left 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
-              >
-                <option value="">اختر الحي</option>
-                {availableNeighborhoods?.map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+                placeholder="اكتب اسم الحي"
+                className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-base text-white transition-all focus:border-gold-prestige/40 outline-none disabled:opacity-40"
+              />
             </div>
           </div>
         )}

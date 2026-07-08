@@ -56,7 +56,6 @@ import {
   buildMarketStats,
   subscribeToSupabaseTables,
 } from "./utils/api";
-import { IRAQ_LOCATIONS } from "./data/iraqLocations";
 import { translations } from "./utils/translations";
 import { batchUploadToSupabase } from "./data/supabaseStorage";
 

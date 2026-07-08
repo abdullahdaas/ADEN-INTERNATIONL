@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Search, Navigation, Map as MapIcon, Copy, AlertTriangle, MapPin, ExternalLink, Loader2 } from 'lucide-react';
-import { IRAQ_LOCATIONS, IRAQ_BOUNDS, isLocationInIraq, IraqLocationData } from '../data/iraqLocations';
+import { Search, Navigation, Map as MapIcon, Copy, AlertTriangle, MapPin, Loader2 } from 'lucide-react';
+import { iraqLocations, IRAQ_GOVERNORATES, IRAQ_BOUNDS, isLocationInIraq } from '../data/iraqLocations';
 
 export interface LocationData {
   country: string;
@@ -20,8 +20,6 @@ export interface LocationData {
   };
   googleMapsUrl: string;
 }
-
-const DEFAULT_CENTER = { lat: 33.3152, lng: 44.3661 }; // Baghdad
 
 interface SmartLocationPickerProps {
   initialLocation?: Partial<LocationData>;
@@ -45,9 +43,7 @@ export function SmartLocationPicker({ initialLocation, onChange, lang = 'ar' }: 
   const [selectedGov, setSelectedGov] = useState(initialLocation?.governorate || '');
   const [selectedDist, setSelectedDist] = useState(initialLocation?.district || '');
   const [selectedSubDist, setSelectedSubDist] = useState(initialLocation?.subDistrict || '');
-  
-  const activeGov = IRAQ_LOCATIONS.find((g: IraqLocationData) => g.governorate === selectedGov);
-  const activeDist = activeGov?.districts.find(d => d.name === selectedDist);
+  const districtOptions = selectedGov ? (iraqLocations[selectedGov] || []) : [];
   
   useEffect(() => {
     // Notify parent whenever locData changes, and validate
@@ -81,8 +77,21 @@ export function SmartLocationPicker({ initialLocation, onChange, lang = 'ar' }: 
         
         // Auto-select dropdowns if match found
         if (newLoc.governorate) {
-          const govMatch = IRAQ_LOCATIONS.find((g: IraqLocationData) => newLoc.governorate.includes(g.governorate) || g.governorate.includes(newLoc.governorate));
-          if (govMatch) setSelectedGov(govMatch.governorate);
+          const govMatch = IRAQ_GOVERNORATES.find(
+            (g) => newLoc.governorate.includes(g) || g.includes(newLoc.governorate),
+          );
+          if (govMatch) {
+            setSelectedGov(govMatch);
+            updateLocField('governorate', govMatch);
+
+            const districtMatch = (iraqLocations[govMatch] || []).find(
+              (d) => newLoc.district.includes(d) || d.includes(newLoc.district),
+            );
+            if (districtMatch) {
+              setSelectedDist(districtMatch);
+              updateLocField('district', districtMatch);
+            }
+          }
         }
 
         setLocData(newLoc);
@@ -188,8 +197,8 @@ export function SmartLocationPicker({ initialLocation, onChange, lang = 'ar' }: 
             updateLocField('governorate', e.target.value);
           }} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white">
             <option value="">{lang === 'ar' ? '-- اختر المحافظة --' : '-- Select --'}</option>
-            {IRAQ_LOCATIONS.map((g: IraqLocationData) => (
-              <option key={g.governorate} value={g.governorate}>{g.governorate}</option>
+            {IRAQ_GOVERNORATES.map((g) => (
+              <option key={g} value={g}>{g}</option>
             ))}
           </select>
         </div>
@@ -199,24 +208,25 @@ export function SmartLocationPicker({ initialLocation, onChange, lang = 'ar' }: 
             setSelectedDist(e.target.value);
             setSelectedSubDist('');
             updateLocField('district', e.target.value);
-          }} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white">
+          }} disabled={!selectedGov} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50">
             <option value="">{lang === 'ar' ? '-- اختر القضاء --' : '-- Select --'}</option>
-            {activeGov?.districts.map(d => (
-              <option key={d.name} value={d.name}>{d.name}</option>
+            {districtOptions.map((d) => (
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </div>
         <div>
           <label className="block text-xs text-slate-400 mb-1">{lang === 'ar' ? 'الناحية / المنطقة' : 'Sub-district'}</label>
-          <select value={selectedSubDist} onChange={(e) => {
-            setSelectedSubDist(e.target.value);
-            updateLocField('subDistrict', e.target.value);
-          }} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white">
-            <option value="">{lang === 'ar' ? '-- اختر الناحية --' : '-- Select --'}</option>
-            {activeDist?.subDistricts.map(sd => (
-              <option key={sd.name} value={sd.name}>{sd.name}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            value={selectedSubDist}
+            onChange={(e) => {
+              setSelectedSubDist(e.target.value);
+              updateLocField('subDistrict', e.target.value);
+            }}
+            placeholder={lang === 'ar' ? 'اكتب اسم الناحية' : 'Enter sub-district'}
+            className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white"
+          />
         </div>
       </div>
 
