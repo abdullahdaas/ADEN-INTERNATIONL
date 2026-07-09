@@ -191,9 +191,9 @@ export default function PropertyDetails({
       setSenderName('');
       setSenderPhone('');
       setTransactionId('');
-    } catch (err) {
-      console.error(err);
-      window.alert('تعذر إرسال إثبات الدفع. تأكد من تسجيل الدخول وحاول مرة أخرى.');
+    } catch (error: any) {
+      console.error(error);
+      alert('Supabase Error: ' + error.message);
     }
   };
 

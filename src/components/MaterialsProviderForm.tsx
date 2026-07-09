@@ -56,11 +56,10 @@ export function MaterialsProviderForm({ onClose }: { onClose: () => void }) {
         throw new Error(response?.message || 'فشل إرسال طلب التسجيل');
       }
 
-      alert('تم تقديم طلبك بنجاح كمزود مواد إنشائية. سيتم مراجعة حسابك وتفعيله قريباً.');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[MaterialsProviderForm] submitProviderApplication failed', error);
-      alert('تعذر إرسال الطلب حالياً. يرجى التحقق من بياناتك ثم المحاولة مرة أخرى.');
+      alert('Supabase Error: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
