@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { ServiceProvider } from "../types";
-import { submitProviderApplication, fetchServiceProviders } from "../utils/api";
+import { submitProviderApplication, fetchServiceProviders, fetchServiceProviderById } from "../utils/api";
 import { IRAQ_GOVERNORATES, getDistrictsByGovernorate } from "../data/iraqLocations";
 import { MaterialsProviderForm } from "./MaterialsProviderForm";
 import { CONSTRUCTION_MATERIALS } from "../data/constructionMaterials";
@@ -44,6 +44,7 @@ export default function ServiceProvidersList({
 }: ServiceProvidersListProps) {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(true);
+  const [loadingProviderId, setLoadingProviderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServiceProviders().then(data => {
@@ -107,6 +108,64 @@ export default function ServiceProvidersList({
   });
 
   const districtOptions = govFilter ? getDistrictsByGovernorate(govFilter) : [];
+
+  const toProviderForDetails = (raw: Partial<ServiceProvider>): ServiceProvider => {
+    const fallbackPhone = raw.whatsapp || raw.ownerName || '';
+    const contactNumbers = Array.isArray(raw.contactNumbers) && raw.contactNumbers.length > 0
+      ? raw.contactNumbers
+      : (fallbackPhone ? [String(fallbackPhone)] : []);
+
+    return {
+      id: String(raw.id || ''),
+      name: String(raw.name || 'مزود خدمة'),
+      ownerName: raw.ownerName,
+      whatsapp: raw.whatsapp,
+      category: String(raw.category || ''),
+      logo: String(raw.logo || 'https://placehold.co/400x400?text=Provider'),
+      coverImage: String(raw.coverImage || 'https://placehold.co/1200x400?text=Provider+Cover'),
+      description: String(raw.description || ''),
+      yearsOfExperience: Number(raw.yearsOfExperience || 0),
+      governorate: String(raw.governorate || ''),
+      district: raw.district,
+      neighborhood: raw.neighborhood,
+      city: String(raw.city || ''),
+      address: String(raw.address || ''),
+      coordinates: raw.coordinates || { lat: 0, lng: 0 },
+      contactNumbers,
+      email: String(raw.email || ''),
+      website: raw.website,
+      socialMedia: raw.socialMedia || {},
+      workingHours: String(raw.workingHours || 'غير محدد'),
+      portfolio: Array.isArray(raw.portfolio) ? raw.portfolio : [],
+      hasDelivery: raw.hasDelivery,
+      materialsOffered: Array.isArray(raw.materialsOffered) ? raw.materialsOffered : [],
+      promoVideo: raw.promoVideo,
+      rating: Number(raw.rating || 0),
+      reviewCount: Number(raw.reviewCount || 0),
+      clientCount: Number(raw.clientCount || 0),
+      views: Number(raw.views || 0),
+      subscriptionPlan: raw.subscriptionPlan || 'free',
+      isVerified: Boolean(raw.isVerified),
+      isPromoted: Boolean(raw.isPromoted),
+      createdAt: String(raw.createdAt || new Date().toISOString()),
+      status: (raw.status as ServiceProvider['status']) || 'approved',
+      userId: String(raw.userId || ''),
+    };
+  };
+
+  const handleOpenProviderDetails = async (provider: ServiceProvider) => {
+    if (!provider?.id) return;
+    setLoadingProviderId(provider.id);
+    try {
+      const record = await fetchServiceProviderById(provider.id);
+      onSelectProvider(toProviderForDetails(record || provider));
+    } catch (err) {
+      console.error('Failed to fetch provider details', err);
+      onSelectProvider(toProviderForDetails(provider));
+    } finally {
+      setLoadingProviderId(null);
+    }
+  };
 
   return (
     <div
@@ -256,7 +315,7 @@ export default function ServiceProvidersList({
           {filteredProviders.map((provider) => (
             <div
               key={provider.id}
-              onClick={() => onSelectProvider(provider)}
+              onClick={() => handleOpenProviderDetails(provider)}
               className="bg-slate-900/40 rounded-2xl border border-white/5 overflow-hidden hover:border-[#F27D26]/50 transition-all cursor-pointer group"
             >
               <div className="h-32 w-full relative">
@@ -323,8 +382,14 @@ export default function ServiceProvidersList({
                     <span className="text-xs text-slate-500 font-mono">
                       {mainTab === 'services' ? `${provider.yearsOfExperience} سنوات خبرة` : `${provider.clientCount} عميل`}
                     </span>
-                    <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
-                      عرض التفاصيل
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleOpenProviderDetails(provider);
+                      }}
+                      className="text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {loadingProviderId === provider.id ? 'جاري التحميل...' : 'عرض التفاصيل'}
                     </button>
                   </div>
                 </div>

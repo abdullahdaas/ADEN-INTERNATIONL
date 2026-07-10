@@ -96,7 +96,6 @@ export interface Property {
   isApproved: boolean;
   isVerified?: boolean;
   phoneViews?: number;
-  pendingDeletion?: boolean;
 
   // Documents (Optional)
   documents?: { title: string; url: string; isPublic: boolean }[];

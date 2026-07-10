@@ -75,9 +75,147 @@ function normalizePaymentRow(row: any): PaymentProof {
   } as PaymentProof;
 }
 
+function toNumberValue(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function toBooleanValue(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return fallback;
+}
+
+function toStringValue(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function toStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+  }
+  return [];
+}
+
+function toDocumentList(value: unknown): { title: string; url: string; isPublic: boolean }[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const doc = entry as Record<string, unknown>;
+      return {
+        title: toStringValue(doc.title),
+        url: toStringValue(doc.url),
+        isPublic: toBooleanValue(doc.isPublic),
+      };
+    })
+    .filter((entry): entry is { title: string; url: string; isPublic: boolean } => !!entry && !!entry.url);
+}
+
+function normalizePropertyRow(row: any): Property {
+  const createdAt = toStringValue(row.createdAt ?? row.created_at, new Date().toISOString());
+  const updatedAt = toStringValue(row.updatedAt ?? row.updated_at, createdAt);
+  const coordinatesSource = row.coordinates || {};
+  return {
+    id: toStringValue(row.id),
+    title: toStringValue(row.title),
+    description: toStringValue(row.description),
+    price: toNumberValue(row.price),
+    space: toNumberValue(row.space),
+    status: (row.status ?? 'للبيع') as Property['status'],
+    isFeatured: toBooleanValue(row.isFeatured ?? row.is_featured),
+    isSuspended: toBooleanValue(row.isSuspended ?? row.is_suspended),
+    featuredPackage: toStringValue(row.featuredPackage ?? row.featured_package) || undefined,
+    country: toStringValue(row.country) || undefined,
+    governorate: toStringValue(row.governorate),
+    district: toStringValue(row.district),
+    subDistrict: toStringValue(row.subDistrict ?? row.sub_district),
+    city: toStringValue(row.city) || undefined,
+    neighborhood: toStringValue(row.neighborhood),
+    village: toStringValue(row.village) || undefined,
+    street: toStringValue(row.street) || undefined,
+    nearestLandmark: toStringValue(row.nearestLandmark ?? row.nearest_landmark) || undefined,
+    postalCode: toStringValue(row.postalCode ?? row.postal_code) || undefined,
+    address: toStringValue(row.address),
+    coordinates: {
+      lat: toNumberValue(coordinatesSource.lat ?? row.lat ?? row.latitude),
+      lng: toNumberValue(coordinatesSource.lng ?? row.lng ?? row.longitude),
+    },
+    googleMapsUrl: toStringValue(row.googleMapsUrl ?? row.google_maps_url) || undefined,
+    locationTimestamp: toStringValue(row.locationTimestamp ?? row.location_timestamp) || undefined,
+    bedrooms: toNumberValue(row.bedrooms),
+    bathrooms: toNumberValue(row.bathrooms),
+    livingRooms: toNumberValue(row.livingRooms ?? row.living_rooms),
+    floors: toNumberValue(row.floors),
+    isFurnished: toBooleanValue(row.isFurnished ?? row.is_furnished),
+    hasGarage: toBooleanValue(row.hasGarage ?? row.has_garage),
+    hasGarden: toBooleanValue(row.hasGarden ?? row.has_garden),
+    hasElevator: toBooleanValue(row.hasElevator ?? row.has_elevator),
+    hasGenerator: toBooleanValue(row.hasGenerator ?? row.has_generator),
+    hasSolarPower: toBooleanValue(row.hasSolarPower ?? row.has_solar_power),
+    hasPool: toBooleanValue(row.hasPool ?? row.has_pool),
+    buildingType: toStringValue(row.buildingType ?? row.building_type),
+    constructionYear: toNumberValue(row.constructionYear ?? row.construction_year),
+    images: toStringList(row.images),
+    videoUrl: toStringValue(row.videoUrl ?? row.video_url) || undefined,
+    agentId: toStringValue(row.agentId ?? row.agent_id),
+    advertiserName: toStringValue(row.advertiserName ?? row.advertiser_name) || undefined,
+    advertiserPhone: toStringValue(row.advertiserPhone ?? row.advertiser_phone) || undefined,
+    advertiserWhatsapp: toStringValue(row.advertiserWhatsapp ?? row.advertiser_whatsapp) || undefined,
+    ownerEmailOrPhone: toStringValue(row.ownerEmailOrPhone ?? row.owner_email_or_phone) || undefined,
+    views: toNumberValue(row.views),
+    favoritesCount: toNumberValue(row.favoritesCount ?? row.favorites_count),
+    createdAt,
+    updatedAt,
+    daysOnPlatform: toNumberValue(row.daysOnPlatform ?? row.days_on_platform),
+    isApproved: toBooleanValue(row.isApproved ?? row.is_approved),
+    isVerified: toBooleanValue(row.isVerified ?? row.is_verified),
+    phoneViews: toNumberValue(row.phoneViews ?? row.phone_views),
+    documents: toDocumentList(row.documents),
+    isAuction: toBooleanValue(row.isAuction ?? row.is_auction),
+    auctionStart: toStringValue(row.auctionStart ?? row.auction_start) || undefined,
+    auctionEnd: toStringValue(row.auctionEnd ?? row.auction_end) || undefined,
+    startingPrice: toNumberValue(row.startingPrice ?? row.starting_price),
+    highestBid: toNumberValue(row.highestBid ?? row.highest_bid),
+    highestBidderId: toStringValue(row.highestBidderId ?? row.highest_bidder_id) || undefined,
+    isAuctionActive: toBooleanValue(row.isAuctionActive ?? row.is_auction_active),
+  };
+}
+
+function preparePropertyInsertPayload(property: Property): Record<string, any> {
+  const payload: Record<string, any> = { ...property };
+  if (property.coordinates) {
+    payload.latitude = toNumberValue(property.coordinates.lat);
+    payload.longitude = toNumberValue(property.coordinates.lng);
+  }
+  delete payload.coordinates;
+  return payload;
+}
+
+async function ensureValidPropertyAgentId(payload: Record<string, any>): Promise<Record<string, any>> {
+  if (!payload.agentId) return payload;
+  try {
+    const agents = await selectAllRows(['agents']);
+    const exists = agents.some((agent: any) => agent.id === payload.agentId);
+    if (!exists) {
+      delete payload.agentId;
+    }
+  } catch {
+    delete payload.agentId;
+  }
+  return payload;
+}
+
 function isMissingRelationError(message?: string): boolean {
   if (!message) return false;
-  return /relation .* does not exist|table .* does not exist/i.test(message);
+  return /relation .* does not exist|table .* does not exist|could not find the table .* in the schema cache/i.test(message);
 }
 
 function toSnakeCaseObject(input: Record<string, any>): Record<string, any> {
@@ -90,12 +228,17 @@ function toSnakeCaseObject(input: Record<string, any>): Record<string, any> {
 }
 
 async function resolveSupabaseTable(candidates: string[]): Promise<string> {
+  const cacheKey = candidates.join('|');
+  const cached = resolvedTableCache.get(cacheKey);
+  if (cached) return cached;
+
   const supabase = getServerSupabase();
   let lastError: any;
 
   for (const table of candidates) {
     const probe = await supabase.from(table).select('id').limit(1);
     if (!probe.error || !isMissingRelationError(probe.error.message)) {
+      resolvedTableCache.set(cacheKey, table);
       return table;
     }
     lastError = probe.error;
@@ -110,6 +253,16 @@ async function selectAllRows(tableCandidates: string[]): Promise<any[]> {
   const result = await supabase.from(table).select('*');
   if (result.error) throw result.error;
   return result.data || [];
+}
+
+const resolvedTableCache = new Map<string, string>();
+
+async function selectRowById(tableCandidates: string[], id: string): Promise<any | null> {
+  const supabase = getServerSupabase();
+  const table = await resolveSupabaseTable(tableCandidates);
+  const result = await supabase.from(table).select('*').eq('id', id).limit(1);
+  if (result.error) throw result.error;
+  return (result.data && result.data.length > 0) ? result.data[0] : null;
 }
 
 async function insertRow(tableCandidates: string[], payload: Record<string, any>): Promise<any> {
@@ -129,6 +282,93 @@ async function insertRow(tableCandidates: string[], payload: Record<string, any>
   return result.data;
 }
 
+function getMissingColumnName(message?: string): string | null {
+  if (!message) return null;
+  const schemaCacheMatch = message.match(/Could not find the '([^']+)' column/i);
+  if (schemaCacheMatch?.[1]) return schemaCacheMatch[1];
+  const genericMatch = message.match(/column ['"]?([^'"\s]+)['"]? does not exist/i);
+  return genericMatch?.[1] || null;
+}
+
+async function insertRowPruningUnknownColumns(
+  tableCandidates: string[],
+  payload: Record<string, any>,
+): Promise<any> {
+  const workingPayload = { ...payload };
+
+  while (true) {
+    try {
+      return await insertRow(tableCandidates, workingPayload);
+    } catch (error: any) {
+      const missingColumn = getMissingColumnName(error?.message);
+      if (!missingColumn || !(missingColumn in workingPayload)) {
+        throw error;
+      }
+      delete workingPayload[missingColumn];
+    }
+  }
+}
+
+async function updateRowPruningUnknownColumns(
+  tableCandidates: string[],
+  id: string,
+  payload: Record<string, any>,
+): Promise<any> {
+  const workingPayload = { ...payload };
+
+  while (true) {
+    if (Object.keys(workingPayload).length === 0) {
+      return await selectRowById(tableCandidates, id);
+    }
+
+    try {
+      return await updateRowById(tableCandidates, id, workingPayload);
+    } catch (error: any) {
+      const missingColumn = getMissingColumnName(error?.message);
+      if (!missingColumn || !(missingColumn in workingPayload)) {
+        throw error;
+      }
+      delete workingPayload[missingColumn];
+    }
+  }
+}
+
+function buildProviderFromApplication(application: Record<string, any>): Record<string, any> {
+  return {
+    id: application.id ? `sp-${application.id}` : `sp-${Date.now()}`,
+    name: application.name,
+    category: application.category,
+    governorate: application.governorate || '',
+    city: application.city || '',
+    address: application.address || application.locationText || '',
+    description: application.details || application.description || '',
+    logo: application.logo || '',
+    coverImage: application.coverImage || '',
+    yearsOfExperience: application.yearsOfExperience || 0,
+    isApproved: true,
+    userId: application.id || application.phone || '',
+  };
+}
+
+function normalizeProviderApplicationRow(row: any) {
+  const details = row.details ?? row.description ?? '';
+  const rejectionReason = row.rejectionReason ?? (row.status === 'rejected' ? details : undefined);
+  return {
+    ...row,
+    details,
+    description: details,
+    rejectionReason,
+  };
+}
+
+function normalizeServiceProviderRow(row: any) {
+  const isApproved = row.isApproved ?? row.is_approved;
+  return {
+    ...row,
+    status: isApproved ? 'نشط' : 'pending',
+  };
+}
+
 async function updateRowById(
   tableCandidates: string[],
   id: string,
@@ -141,20 +381,18 @@ async function updateRowById(
     .from(table)
     .update(payload as any)
     .eq('id', id)
-    .select('*')
-    .single();
+    .select('*');
 
   if (result.error && /column .* does not exist/i.test(result.error.message)) {
     result = await supabase
       .from(table)
       .update(toSnakeCaseObject(payload) as any)
       .eq('id', id)
-      .select('*')
-      .single();
+      .select('*');
   }
 
   if (result.error) throw result.error;
-  return result.data;
+  return (result.data && result.data.length > 0) ? result.data[0] : null;
 }
 
 async function deleteRowById(tableCandidates: string[], id: string): Promise<void> {
@@ -162,6 +400,39 @@ async function deleteRowById(tableCandidates: string[], id: string): Promise<voi
   const table = await resolveSupabaseTable(tableCandidates);
   const result = await supabase.from(table).delete().eq('id', id);
   if (result.error) throw result.error;
+}
+
+function preparePropertyUpdatePayload(payload: Record<string, any>): Record<string, any> {
+  const next = { ...payload };
+  if (next.coordinates && typeof next.coordinates === 'object') {
+    next.latitude = toNumberValue(next.coordinates.lat);
+    next.longitude = toNumberValue(next.coordinates.lng);
+  }
+  delete next.coordinates;
+  delete next.id;
+  return next;
+}
+
+async function getPropertyById(propertyId: string): Promise<Property | null> {
+  const row = await selectRowById(['properties'], propertyId);
+  return row ? normalizePropertyRow(row) : null;
+}
+
+async function listProperties(): Promise<Property[]> {
+  return (await selectAllRows(['properties'])).map(normalizePropertyRow);
+}
+
+async function updatePropertyById(propertyId: string, updates: Record<string, any>): Promise<Property> {
+  const prepared = await ensureValidPropertyAgentId(preparePropertyUpdatePayload(updates));
+  const row = await updateRowPruningUnknownColumns(['properties'], propertyId, prepared);
+  if (!row) {
+    throw new Error('Property not found');
+  }
+  return normalizePropertyRow(row);
+}
+
+async function deletePropertyById(propertyId: string): Promise<void> {
+  await deleteRowById(['properties'], propertyId);
 }
 
 // Enforce HTTPS in production
@@ -252,7 +523,7 @@ app.use(sanitizeInput);
 
 
 // Rate Limiting
-const limiter = rateLimit({
+const abuseLimiter = rateLimit({
   validate: { default: false },
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // limit each IP to 200 requests per windowMs
@@ -266,7 +537,6 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many login attempts, please try again later.' }
 });
 
-app.use('/api/', limiter);
 app.use('/api/login', authLimiter);
 app.use('/api/citizen-login', authLimiter);
 app.use('/api/citizen-register', authLimiter);
@@ -513,10 +783,21 @@ app.get('/api/settings', async (req, res) => {
 // Service Providers
 app.get('/api/service-providers', async (req, res) => {
   try {
-    const providers = await selectAllRows(['service_providers', 'serviceProviders']);
+    const providers = (await selectAllRows(['service_providers', 'serviceProviders'])).map(normalizeServiceProviderRow);
     res.json(providers);
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message || 'Failed to fetch service providers' });
+  }
+});
+app.get('/api/service-providers/:id', async (req, res) => {
+  try {
+    const provider = await selectRowById(['service_providers', 'serviceProviders'], req.params.id);
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+    res.json(normalizeServiceProviderRow(provider));
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch service provider details' });
   }
 });
 app.post('/api/service-providers', requireAuth, async (req, res) => {
@@ -550,7 +831,7 @@ app.delete('/api/service-providers/:id', requireAdmin, async (req, res) => {
 // Provider Applications
 app.get('/api/provider-applications', async (req, res) => {
   try {
-    const applications = await selectAllRows(['provider_applications', 'providerApplications']);
+    const applications = (await selectAllRows(['provider_applications', 'providerApplications', 'service_provider_applications'])).map(normalizeProviderApplicationRow);
     res.json(applications);
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message || 'Failed to fetch provider applications' });
@@ -558,28 +839,46 @@ app.get('/api/provider-applications', async (req, res) => {
 });
 app.post('/api/provider-applications', async (req, res) => {
   try {
-    const application = await insertRow(
-      ['provider_applications', 'providerApplications'],
+    const application = await insertRowPruningUnknownColumns(
+      ['provider_applications', 'providerApplications', 'service_provider_applications'],
       {
         ...req.body,
         id: req.body.id || `prov-app-${Date.now()}`,
         status: req.body.status || 'pending',
+        description: req.body.details || req.body.description || '',
         createdAt: req.body.createdAt || new Date().toISOString(),
       },
     );
-    res.status(201).json({ success: true, application });
+    res.status(201).json({ success: true, application: normalizeProviderApplicationRow(application) });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message || 'Failed to submit provider application' });
   }
 });
 app.put('/api/provider-applications/:id', requireAdmin, async (req, res) => {
   try {
-    const updated = await updateRowById(
-      ['provider_applications', 'providerApplications'],
+    const nextStatus = req.body.status;
+    const existingApplications = await selectAllRows(['provider_applications', 'providerApplications', 'service_provider_applications']);
+    const existingApplication = existingApplications.find((application: any) => application.id === req.params.id);
+    const updated = await updateRowPruningUnknownColumns(
+      ['provider_applications', 'providerApplications', 'service_provider_applications'],
       req.params.id,
-      { ...req.body, updatedAt: new Date().toISOString() },
+      {
+        status: nextStatus,
+        description:
+          nextStatus === 'rejected'
+            ? [existingApplication?.description || existingApplication?.details || '', req.body.rejectionReason || ''].filter(Boolean).join('\n')
+            : (existingApplication?.description || existingApplication?.details || ''),
+        updatedAt: new Date().toISOString(),
+      },
     );
-    res.json({ success: true, application: updated });
+
+    let provider: any = null;
+    if (nextStatus === 'approved') {
+      const providerPayload = buildProviderFromApplication(updated);
+      provider = await insertRowPruningUnknownColumns(['service_providers', 'serviceProviders'], providerPayload);
+    }
+
+    res.json({ success: true, application: normalizeProviderApplicationRow(updated), provider: provider ? normalizeServiceProviderRow(provider) : null });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message || 'Failed to update provider application' });
   }
@@ -715,7 +1014,7 @@ app.get('/api/agreements/user/:userId', async (req, res) => {
   res.json(userAgreements);
 });
 
-app.get('/api/agreements/verify/:serial', async (req, res) => {
+app.get('/api/agreements/verify/:serial', abuseLimiter, async (req, res) => {
   const agreements = await db.agreements.getAll();
   const match = agreements.find(a => a.serialNumber === req.params.serial);
   if (match) res.json(match);
@@ -733,7 +1032,7 @@ app.put('/api/settings', requireAdmin, async (req, res) => {
 
 
 app.get('/api/properties', async (req, res) => {
-  let list = await db.properties.getAll();
+  let list = (await selectAllRows(['properties'])).map(normalizePropertyRow);
   
   const userId = req.headers['x-user-id'] as string;
   const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
@@ -755,7 +1054,7 @@ app.get('/api/properties', async (req, res) => {
   } else {
     list = list.filter(p => {
       const isOwner = userId && p.ownerEmailOrPhone && p.ownerEmailOrPhone.toLowerCase() === userId.toLowerCase();
-      return (p.isApproved && !p.pendingDeletion) || isOwner;
+      return p.isApproved || isOwner;
     });
     if (isApproved !== undefined && isApproved !== 'all') {
       const approvedVal = isApproved === 'true';
@@ -814,47 +1113,57 @@ app.get('/api/properties', async (req, res) => {
 });
 
 app.get('/api/properties/:id', async (req, res) => {
-  const p = await db.properties.getById(req.params.id);
-  if (p) {
-    await db.properties.update(p.id!, { views: (p.views || 0) + 1 });
-    p.views = (p.views || 0) + 1;
-    res.json(p);
-  } else {
-    res.status(404).json({ error: 'Property not found' });
+  try {
+    const p = await getPropertyById(req.params.id);
+    if (!p) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+
+    let responseProperty = p;
+    try {
+      responseProperty = await updatePropertyById(p.id, {
+        views: (p.views || 0) + 1,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (viewError: any) {
+      console.warn('[properties:get-by-id] failed to increment views:', viewError?.message || viewError);
+    }
+
+    res.json(responseProperty);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch property' });
   }
 });
 
 app.post('/api/properties', requireAuth, async (req, res) => {
-  const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
-  const propertyData = { ...req.body };
-  
-  if (!isAdmin) {
-    propertyData.isApproved = false;
-    propertyData.isFeatured = false;
-    delete propertyData.featuredPackage;
-  }
-  
-  const newProperty: Property = {
-    ...propertyData,
-    id: 'prop-' + Date.now(),
-    views: 0,
-    favoritesCount: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    daysOnPlatform: 0,
-    isApproved: propertyData.isApproved !== undefined ? propertyData.isApproved : false
-  };
+  try {
+    const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
+    const propertyData = { ...req.body };
 
-  await db.properties.add(newProperty);
-  
-  if (newProperty.agentId) {
-    const agent = await db.agents.getById(newProperty.agentId);
-    if (agent) {
-      await db.agents.update(agent.id!, { propertyCount: (agent.propertyCount || 0) + 1 });
+    if (!isAdmin) {
+      propertyData.isApproved = false;
+      propertyData.isFeatured = false;
+      delete propertyData.featuredPackage;
     }
-  }
 
-  res.status(201).json(newProperty);
+    const newProperty: Property = {
+      ...propertyData,
+      id: req.body.id || ('prop-' + Date.now()),
+      views: 0,
+      favoritesCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      daysOnPlatform: 0,
+      isApproved: propertyData.isApproved !== undefined ? propertyData.isApproved : false,
+    };
+
+    const insertPayload = await ensureValidPropertyAgentId(preparePropertyInsertPayload(newProperty));
+    const inserted = await insertRowPruningUnknownColumns(['properties'], insertPayload);
+    res.status(201).json(normalizePropertyRow(inserted));
+  } catch (error: any) {
+    console.error('[properties:post] failed', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to create property' });
+  }
 });
 
 app.put('/api/properties/:id', requireAuth, async (req, res) => {
@@ -862,7 +1171,7 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
 
   const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
   const userId = req.headers['x-user-id'] as string;
-  const p = await db.properties.getById(req.params.id);
+  const p = await getPropertyById(req.params.id);
   
   if (p) {
     const isOwner = userId && p.ownerEmailOrPhone && p.ownerEmailOrPhone.toLowerCase() === userId.toLowerCase();
@@ -879,10 +1188,14 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
       delete updateData.isApproved;
       delete updateData.isFeatured;
       delete updateData.featuredPackage;
+    } else if (req.body.isApproved === true) {
+      // Admin approval must always satisfy homepage listing filters immediately.
+      updateData.isApproved = true;
+      updateData.isSuspended = false;
+      updateData.status = 'للبيع';
     }
     
-    const updated = {
-      ...p,
+    const updatedPayload = {
       ...updateData,
       updatedAt: new Date().toISOString()
     };
@@ -893,7 +1206,7 @@ app.put('/api/properties/:id', requireAuth, async (req, res) => {
       await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete Supabase image', e));
       await deleteFileFromSpaces(url).catch(e => console.error('Failed to delete Spaces image', e));
     }
-    await db.properties.update(p.id!, updated);
+    const updated = await updatePropertyById(p.id, updatedPayload);
     
     if (req.body.isApproved === true && !p.isApproved) {
         if (p.ownerEmailOrPhone) {
@@ -955,7 +1268,7 @@ app.delete('/api/properties/:id', requireAuth, async (req, res) => {
 
     const isAdmin = (req as any).user && ((req as any).user.role === 'admin' || (req as any).user.role === 'super_admin' || (req as any).user.role === 'supervisor');
     const userId = req.headers['x-user-id'] as string;
-    const p = await db.properties.getById(propertyId);
+    const p = await getPropertyById(propertyId);
     
     if (p) {
       console.log(`[DB FETCH] - Property found: ${p.title} (Status: ${p.status})`);
@@ -968,7 +1281,7 @@ app.delete('/api/properties/:id', requireAuth, async (req, res) => {
 
       if (isHard) {
         console.log(`[EXECUTION] - Hard deleting property from database...`);
-        await db.properties.remove(p.id!);
+        await deletePropertyById(p.id);
         if (p.images && p.images.length > 0) {
           for (const url of p.images) {
             await deleteFileFromSupabase(url).catch(e => console.error('Failed to delete Supabase image', e));
@@ -977,8 +1290,8 @@ app.delete('/api/properties/:id', requireAuth, async (req, res) => {
         }
         console.log(`[SUCCESS] - Property hard deleted successfully. Rows affected: 1`);
       } else {
-        console.log(`[EXECUTION] - Soft deleting property (Updating status to 'مرفوض' and pendingDeletion to true)...`);
-        await db.properties.update(p.id!, { pendingDeletion: true, isApproved: false, status: 'مرفوض' });
+        console.log(`[EXECUTION] - Soft deleting property (Updating status to 'مرفوض')...`);
+        await updatePropertyById(p.id, { isApproved: false, status: 'مرفوض', updatedAt: new Date().toISOString() });
         console.log(`[SUCCESS] - Property soft deleted successfully. Rows affected: 1`);
       }
 
@@ -1022,7 +1335,7 @@ app.get('/api/agents', async (req, res) => {
 app.get('/api/agents/:id', async (req, res) => {
   const agent = await db.agents.getById(req.params.id);
   if (agent) {
-    const props = await db.properties.getAll();
+    const props = await listProperties();
     res.json({
       ...agent,
       properties: props.filter(p => p.agentId === agent.id)
@@ -1041,7 +1354,7 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
     res.status(500).json({ success: false, message: error.message || 'Failed to fetch reviews' });
   }
 });
-app.post('/api/reviews', async (req, res) => {
+app.post('/api/reviews', abuseLimiter, async (req, res) => {
   try {
     const review = await insertRow(['reviews'], {
       ...req.body,
@@ -1148,50 +1461,46 @@ app.get('/api/payments', async (req, res) => {
 
 app.post('/api/payments', requireAuth, async (req, res) => {
   try {
-    const supabase = getServerSupabase();
     const createdAt = new Date().toISOString();
     const packageName = req.body.packageName;
     const paymentType = inferPaymentType(packageName, req.body.paymentType);
+    const propertyId = req.body.propertyId;
+
+    if (!propertyId) {
+      return res.status(400).json({ success: false, message: 'Property ID is required for payment submission' });
+    }
+
+    const property = await selectRowById(['properties'], propertyId);
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Linked property not found' });
+    }
+
     const newProof: PaymentProof = {
       ...req.body,
       id: req.body.id || ('pay-' + Date.now()),
+      propertyId,
       paymentType,
       status: 'pending',
       createdAt,
     };
 
-    let insertResult = await supabase
-      .from('payments')
-      .insert(newProof as any)
-      .select('*')
-      .single();
+    const inserted = await insertRowPruningUnknownColumns(['payments'], {
+      id: newProof.id,
+      propertyId: newProof.propertyId,
+      packageName: newProof.packageName,
+      paymentType: newProof.paymentType,
+      amount: newProof.amount,
+      paymentMethod: newProof.paymentMethod,
+      proofImage: newProof.proofImage,
+      senderName: newProof.senderName,
+      senderPhone: newProof.senderPhone,
+      transactionId: newProof.transactionId ?? null,
+      status: newProof.status,
+      createdAt: newProof.createdAt,
+      rejectionReason: null,
+    });
 
-    if (insertResult.error && /column .* does not exist/i.test(insertResult.error.message)) {
-      insertResult = await supabase
-        .from('payments')
-        .insert({
-          id: newProof.id,
-          property_id: newProof.propertyId,
-          package_name: newProof.packageName,
-          payment_type: newProof.paymentType,
-          amount: newProof.amount,
-          payment_method: newProof.paymentMethod,
-          proof_image: newProof.proofImage,
-          sender_name: newProof.senderName,
-          sender_phone: newProof.senderPhone,
-          transaction_id: newProof.transactionId ?? null,
-          status: newProof.status,
-          created_at: newProof.createdAt,
-        } as any)
-        .select('*')
-        .single();
-    }
-
-    if (insertResult.error) {
-      throw insertResult.error;
-    }
-
-    res.status(201).json(normalizePaymentRow(insertResult.data));
+    res.status(201).json(normalizePaymentRow(inserted));
   } catch (error: any) {
     console.error('[payments:post] failed', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to submit payment proof' });
@@ -1200,86 +1509,40 @@ app.post('/api/payments', requireAuth, async (req, res) => {
 
 app.put('/api/payments/:id/status', requireAdmin, async (req, res) => {
   try {
-    const supabase = getServerSupabase();
     const { status, propertyId, packageName, rejectionReason } = req.body;
 
-    let paymentResult = await supabase
-      .from('payments')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-
-    if (paymentResult.error) {
-      throw paymentResult.error;
+    if (status !== 'approved' && status !== 'rejected') {
+      return res.status(400).json({ success: false, message: 'Invalid payment status value' });
     }
 
-    const payment = normalizePaymentRow(paymentResult.data);
-    const paymentUpdates: Record<string, any> = {
+    const paymentRow = await selectRowById(['payments'], req.params.id);
+    if (!paymentRow) {
+      return res.status(404).json({ success: false, message: 'Payment request not found' });
+    }
+
+    const payment = normalizePaymentRow(paymentRow);
+    const updatedPaymentRow = await updateRowPruningUnknownColumns(['payments'], req.params.id, {
       status,
       rejectionReason: rejectionReason || null,
-    };
+    });
 
-    let updatePaymentResult = await supabase
-      .from('payments')
-      .update(paymentUpdates)
-      .eq('id', req.params.id)
-      .select('*')
-      .single();
+    const effectivePropertyId = propertyId || payment.propertyId;
+    const effectivePackageName = packageName || payment.packageName;
 
-    if (updatePaymentResult.error && /column .* does not exist/i.test(updatePaymentResult.error.message)) {
-      updatePaymentResult = await supabase
-        .from('payments')
-        .update({
-          status,
-          rejection_reason: rejectionReason || null,
-        } as any)
-        .eq('id', req.params.id)
-        .select('*')
-        .single();
-    }
-
-    if (updatePaymentResult.error) {
-      throw updatePaymentResult.error;
-    }
-
-    if (status === 'approved' && propertyId) {
-      const isPromotion = packageName !== 'auction_entry';
+    if (status === 'approved' && effectivePropertyId) {
+      const isPromotion = effectivePackageName !== 'auction_entry';
       if (isPromotion) {
-        let updatePropertyResult = await supabase
-          .from('properties')
-          .update({
-            isFeatured: true,
-            status: 'مميز',
-            featuredPackage: packageName,
-            isApproved: true,
-            updatedAt: new Date().toISOString(),
-          } as any)
-          .eq('id', propertyId)
-          .select('id')
-          .single();
-
-        if (updatePropertyResult.error && /column .* does not exist/i.test(updatePropertyResult.error.message)) {
-          updatePropertyResult = await supabase
-            .from('properties')
-            .update({
-              is_featured: true,
-              status: 'مميز',
-              featured_package: packageName,
-              is_approved: true,
-              updated_at: new Date().toISOString(),
-            } as any)
-            .eq('id', propertyId)
-            .select('id')
-            .single();
-        }
-
-        if (updatePropertyResult.error) {
-          throw updatePropertyResult.error;
-        }
+        await updateRowPruningUnknownColumns(['properties'], effectivePropertyId, {
+          isFeatured: true,
+          status: 'مميز',
+          featuredPackage: effectivePackageName,
+          isApproved: true,
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
 
-    res.json(normalizePaymentRow(updatePaymentResult.data));
+    res.json(normalizePaymentRow(updatedPaymentRow));
   } catch (error: any) {
     console.error('[payments:status] failed', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to update payment status' });
@@ -1349,7 +1612,7 @@ app.get('/api/auctions/:propertyId/participants', async (req, res) => {
 app.post('/api/auctions/:propertyId/bids', requireAuth, async (req, res) => {
   const { userId, userName, amount } = req.body;
   const propId = req.params.propertyId;
-  const prop = await db.properties.getById(propId);
+  const prop = await getPropertyById(propId);
   if (!prop) return res.status(404).json({ error: 'Property not found' });
   
   if (amount <= (prop.highestBid || prop.startingPrice || 0)) {
@@ -1365,7 +1628,7 @@ app.post('/api/auctions/:propertyId/bids', requireAuth, async (req, res) => {
     createdAt: new Date().toISOString()
   };
   await db.bids.add(newBid);
-  await db.properties.update(propId, {
+  await updatePropertyById(propId, {
     highestBid: amount,
     highestBidderId: userId
   });
@@ -1464,10 +1727,10 @@ app.put('/api/complaints/:id', requireAdmin, async (req, res) => {
 });
 
 // --- Phone View Increment ---
-app.post('/api/properties/:id/phone-view', async (req, res) => {
-  const prop = await db.properties.getById(req.params.id);
+app.post('/api/properties/:id/phone-view', abuseLimiter, async (req, res) => {
+  const prop = await getPropertyById(req.params.id);
   if (prop) {
-    await db.properties.update(prop.id, {
+    await updatePropertyById(prop.id, {
       phoneViews: (prop.phoneViews || 0) + 1
     });
     res.json({ success: true });
@@ -1578,12 +1841,12 @@ app.get('/api/profiles/:identity', async (req, res) => {
 
   if (profile) {
     const { password, ...safeProfile } = profile;
-    const allProps = await db.properties.getAll();
+    const allProps = await listProperties();
     const userProperties = allProps.filter(p => p.ownerEmailOrPhone && p.ownerEmailOrPhone.trim().toLowerCase() === profile.emailOrPhone.trim().toLowerCase() && p.isApproved);
     res.json({ profile: safeProfile, properties: userProperties });
   } else {
     if (identity.includes('@') || /^\+?[0-9]{8,15}$/.test(identity)) {
-      const allProps = await db.properties.getAll();
+      const allProps = await listProperties();
       res.json({ 
         profile: null, 
         properties: allProps.filter(p => p.ownerEmailOrPhone && p.ownerEmailOrPhone.trim().toLowerCase() === identity && p.isApproved) 
@@ -1639,10 +1902,10 @@ app.post('/api/profiles', async (req, res) => {
     await db.profiles.add(profileData);
   }
 
-  const allProps = await db.properties.getAll();
+  const allProps = await listProperties();
   for (const p of allProps) {
     if (p.ownerEmailOrPhone && p.ownerEmailOrPhone.trim().toLowerCase() === emailOrPhone.trim().toLowerCase()) {
-      await db.properties.update(p.id!, {
+      await updatePropertyById(p.id, {
         advertiserName: profileData.name,
         advertiserPhone: profileData.phone || p.advertiserPhone,
         advertiserWhatsapp: profileData.whatsapp || p.advertiserWhatsapp
@@ -1655,7 +1918,7 @@ app.post('/api/profiles', async (req, res) => {
 });
 
 app.get('/api/stats', async (req, res) => {
-  const allProps = await db.properties.getAll();
+  const allProps = await listProperties();
   const allDeals = await db.deals.getAll();
   
   const activeProperties = allProps.filter(p => p.isApproved);
@@ -1796,7 +2059,7 @@ startServer();
 
 export { app };
 
-app.post('/api/agreements/scan-history', async (req, res) => {
+app.post('/api/agreements/scan-history', abuseLimiter, async (req, res) => {
   try {
     const { serialNumber, device, browser } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

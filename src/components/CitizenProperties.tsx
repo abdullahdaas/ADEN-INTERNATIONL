@@ -295,7 +295,7 @@ export default function CitizenProperties({ user, lang, onViewPropertyDetails }:
   const handleDeleteProp = async (id: string) => {
     if (!window.confirm(lang === 'ar' ? 'هل أنت متأكد من رغبتك في إلغاء نشر هذا العقار؟ (سيخضع العقار لمراجعة الإدارة قبل الحذف النهائي)' : lang === 'ku' ? 'دڵنیای لە هەڵوەشاندنەوەی بڵاوکردنەوەی ئەم خانووبەرەیە؟ (خانووبەرەکە پێش سڕینەوەی یەکجاری پێداچوونەوەی بۆ دەکرێت لەلایەن بەڕێوەبەرایەتییەوە)' : 'Are you sure you want to unpublish this property? (It will be reviewed by admin before final deletion)')) return;
     try {
-      await updateProperty(id, { pendingDeletion: true, isApproved: false });
+      await updateProperty(id, { status: 'مرفوض', isApproved: false });
       alert(lang === 'ar' ? 'تم إرسال طلب الحذف للإدارة للمراجعة.' : lang === 'ku' ? 'داواکاری سڕینەوە نێردرا بۆ بەڕێوەبەرایەتی بۆ پێداچوونەوە.' : 'Deletion request sent to admin for review.');
       loadMyProperties();
     } catch (err) {

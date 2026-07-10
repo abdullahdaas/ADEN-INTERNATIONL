@@ -148,7 +148,6 @@ function normalizeProperty(row: any): Property {
     isApproved: toBoolean(row.isApproved ?? row.is_approved),
     isVerified: toBoolean(row.isVerified ?? row.is_verified),
     phoneViews: toNumber(row.phoneViews ?? row.phone_views),
-    pendingDeletion: toBoolean(row.pendingDeletion ?? row.pending_deletion),
     documents: toDocuments(row.documents),
     isAuction: toBoolean(row.isAuction ?? row.is_auction),
     auctionStart: toStringValue(row.auctionStart ?? row.auction_start) || undefined,
@@ -411,8 +410,8 @@ export function buildMarketStats(
   }));
 
   return {
-    activeCount: properties.filter((property) => property.isApproved && !property.pendingDeletion).length,
-    pendingCount: properties.filter((property) => !property.isApproved || property.pendingDeletion).length,
+    activeCount: properties.filter((property) => property.isApproved && property.status !== 'مرفوض').length,
+    pendingCount: properties.filter((property) => !property.isApproved || property.status === 'مرفوض').length,
     soldCount: soldDeals.length,
     rentedCount: rentedDeals.length,
     avgDaysToSell: soldDeals.length ? Math.round(soldDeals.reduce((sum, deal) => sum + deal.daysToComplete, 0) / soldDeals.length) : 0,
@@ -524,7 +523,18 @@ async function readJsonOrThrow<T = any>(res: Response, fallbackMessage: string):
 }
 
 export async function fetchProperties(filters: Record<string, any> = {}): Promise<Property[]> {
-  return fetchPropertiesFromSupabase(filters);
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  }
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/properties${query ? `?${query}` : ''}`, {
+    headers: getAuthHeadersGET(),
+    cache: 'no-store',
+  });
+  return readJsonOrThrow<Property[]>(res, 'Failed to fetch properties');
 }
 
 export async function fetchPropertyById(id: string): Promise<Property> {
@@ -534,19 +544,12 @@ export async function fetchPropertyById(id: string): Promise<Property> {
 }
 
 export async function createProperty(property: Omit<Property, 'id' | 'views' | 'favoritesCount' | 'createdAt' | 'updatedAt' | 'daysOnPlatform'>): Promise<Property> {
-  const now = new Date().toISOString();
-  const payload = preparePropertyForWrite({
-    ...property,
-    id: crypto.randomUUID(),
-    views: 0,
-    favoritesCount: 0,
-    createdAt: now,
-    updatedAt: now,
-    daysOnPlatform: 0,
+  const res = await fetch(`${API_BASE}/properties`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(property),
   });
-  const { data, error } = await getSupabase().from('properties').insert(payload).select('*').single();
-  if (error || !data) throw new Error(error?.message || 'Failed to create property');
-  return normalizeProperty(data);
+  return readJsonOrThrow<Property>(res, 'Failed to create property');
 }
 
 export async function updateProperty(id: string, property: Partial<Property>): Promise<Property> {
@@ -556,10 +559,26 @@ export async function updateProperty(id: string, property: Partial<Property>): P
   return normalizeProperty(data);
 }
 
+export async function approvePropertyForPublishing(id: string, status?: Property['status']): Promise<Property> {
+  const payload: Partial<Property> = {
+    isApproved: true,
+    isSuspended: false,
+  };
+  if (status) payload.status = status;
+
+  const res = await fetch(`${API_BASE}/properties/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return readJsonOrThrow<Property>(res, 'Failed to approve property');
+}
+
 export async function deleteProperty(id: string, hard = true): Promise<boolean> {
   if (!hard) {
-    const { error } = await getSupabase().from('properties').update({ pendingDeletion: true, isApproved: false, updatedAt: new Date().toISOString() }).eq('id', id);
-    if (error) throw new Error(error.message || 'Failed to mark property for deletion');
+    const { error } = await getSupabase().from('properties').update({ status: 'مرفوض', isApproved: false, updatedAt: new Date().toISOString() }).eq('id', id);
+    if (error) throw new Error(error.message || 'Failed to mark property as rejected');
     return true;
   }
 
@@ -621,8 +640,7 @@ export async function submitPaymentProof(payment: Omit<PaymentProof, 'id' | 'sta
     headers: getAuthHeaders(),
     body: JSON.stringify(payment)
   });
-  if (!res.ok) throw new Error('Failed to submit payment proof');
-  return res.json();
+  return readJsonOrThrow<PaymentProof>(res, 'Failed to submit payment proof');
 }
 
 export async function updatePaymentStatus(id: string, status: 'approved' | 'rejected', propertyId: string, packageName: string, rejectionReason?: string): Promise<PaymentProof> {
@@ -631,8 +649,7 @@ export async function updatePaymentStatus(id: string, status: 'approved' | 'reje
     headers: getAuthHeaders(),
     body: JSON.stringify({ status, propertyId, packageName, rejectionReason })
   });
-  if (!res.ok) throw new Error('Failed to update payment status');
-  return res.json();
+  return readJsonOrThrow<PaymentProof>(res, 'Failed to update payment status');
 }
 
 export async function fetchStats(): Promise<{
@@ -893,6 +910,10 @@ export const updateAgreementStatus = async (id: string, status: string): Promise
 export const fetchServiceProviders = async (): Promise<any[]> => {
   const res = await fetch('/api/service-providers', { headers: getAuthHeadersGET(), cache: 'no-store' });
   return readJsonOrThrow<any[]>(res, 'Failed to fetch service providers');
+};
+export const fetchServiceProviderById = async (id: string): Promise<any> => {
+  const res = await fetch('/api/service-providers/' + encodeURIComponent(id), { headers: getAuthHeadersGET(), cache: 'no-store' });
+  return readJsonOrThrow<any>(res, 'Failed to fetch service provider details');
 };
 export const addServiceProvider = async (provider: any): Promise<any> => {
   const res = await fetch('/api/service-providers', {

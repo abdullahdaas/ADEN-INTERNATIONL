@@ -35,6 +35,20 @@ export default function ServiceProviderProfile({
   const [activeTab, setActiveTab] = useState<"about" | "portfolio" | "reviews">(
     "about",
   );
+  const contactNumbers = Array.isArray(provider.contactNumbers) ? provider.contactNumbers : [];
+  const primaryPhone = contactNumbers[0] || "";
+  const whatsappRaw = provider.whatsapp || primaryPhone;
+  const whatsappDigits = whatsappRaw.replace(/\D/g, "");
+  const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined;
+  const reviewHref = provider.email
+    ? `mailto:${provider.email}?subject=${encodeURIComponent("تقييم خدمة مزود")}`
+    : undefined;
+  const mapsHref =
+    provider.coordinates && Number.isFinite(provider.coordinates.lat) && Number.isFinite(provider.coordinates.lng)
+      ? `https://www.google.com/maps?q=${provider.coordinates.lat},${provider.coordinates.lng}`
+      : provider.address
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(provider.address)}`
+        : undefined;
 
   return (
     <div
@@ -109,9 +123,14 @@ export default function ServiceProviderProfile({
             >
               <Phone className="h-5 w-5" /> اتصال
             </a>
-            <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all">
+            <a
+              href={whatsappHref || (primaryPhone ? `tel:${primaryPhone}` : "#")}
+              target={whatsappHref ? "_blank" : undefined}
+              rel={whatsappHref ? "noopener noreferrer" : undefined}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all"
+            >
               <MessageSquare className="h-5 w-5" /> محادثة
-            </button>
+            </a>
           </div>
         </div>
 
@@ -236,9 +255,12 @@ export default function ServiceProviderProfile({
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                  <a
+                    href={reviewHref || (primaryPhone ? `tel:${primaryPhone}` : "#")}
+                    className="bg-[#F27D26] hover:bg-[#d96a1a] text-[#ffffff] px-4 py-2 rounded-lg text-sm font-bold transition-all"
+                  >
                     أضف تقييمك
-                  </button>
+                  </a>
                 </div>
 
               </div>
@@ -252,7 +274,7 @@ export default function ServiceProviderProfile({
                 معلومات التواصل
               </h3>
 
-              {provider.contactNumbers.map((num, i) => (
+              {contactNumbers.map((num, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-slate-300 text-sm">
                     <Phone className="h-4 w-4 text-[#F27D26]" />
@@ -260,6 +282,10 @@ export default function ServiceProviderProfile({
                   </div>
                 </div>
               ))}
+
+              {contactNumbers.length === 0 && (
+                <div className="text-slate-500 text-sm">لا تتوفر أرقام اتصال حالياً</div>
+              )}
 
               <div className="flex items-center gap-3 text-slate-300 text-sm">
                 <Mail className="h-4 w-4 text-[#F27D26]" />
@@ -289,9 +315,14 @@ export default function ServiceProviderProfile({
                 <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80')] bg-cover bg-center"></div>
                 <MapPin className="h-8 w-8 text-red-500 relative z-10" />
               </div>
-              <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg text-sm font-bold transition-all">
+              <a
+                href={mapsHref || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg text-sm font-bold transition-all"
+              >
                 <Navigation className="h-4 w-4" /> فتح في خرائط جوجل
-              </button>
+              </a>
             </div>
           </div>
         </div>

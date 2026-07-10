@@ -169,20 +169,27 @@ export default function PropertyDetails({
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!senderName || !senderPhone) return;
+    if (!senderName || !senderPhone || !proofImageFile) return;
 
     const amount = selectedPackage === 'basic' ? 5000 : 
                    selectedPackage === 'medium' ? 10000 : 
                    selectedPackage === 'premium' ? 25000 : 50000;
 
     try {
+      const proofImage = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+        reader.onerror = () => reject(new Error('تعذر قراءة صورة الإثبات. حاول مرة أخرى.'));
+        reader.readAsDataURL(proofImageFile);
+      });
+
       await submitPaymentProof({
         propertyId: property.id,
         packageName: selectedPackage,
         paymentType: 'featured_ad',
         amount,
         paymentMethod,
-        proofImage: proofImageFile ? URL.createObjectURL(proofImageFile) : 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&auto=format&fit=crop&q=80',
+        proofImage,
         senderName,
         senderPhone,
         transactionId
@@ -191,6 +198,7 @@ export default function PropertyDetails({
       setSenderName('');
       setSenderPhone('');
       setTransactionId('');
+      setProofImageFile(null);
     } catch (error: any) {
       console.error(error);
       alert('Supabase Error: ' + error.message);

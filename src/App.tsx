@@ -1505,8 +1505,33 @@ export default function App() {
         {currentView === "admin" && (
           <AdminPortal
             onLogout={() => setView("home")}
-            onRefreshProperties={() => {
-              loadData();
+            onRefreshProperties={(updatedProperty?: Property) => {
+              if (!updatedProperty) {
+                loadData();
+                return;
+              }
+
+              const matchesStatusFilter =
+                !listingsFilters.status ||
+                updatedProperty.status === listingsFilters.status;
+              const isVisibleForHomepage =
+                !!updatedProperty.isApproved && matchesStatusFilter;
+
+              setProperties((prev) => {
+                const exists = prev.some((prop) => prop.id === updatedProperty.id);
+
+                if (!isVisibleForHomepage) {
+                  return prev.filter((prop) => prop.id !== updatedProperty.id);
+                }
+
+                if (exists) {
+                  return prev.map((prop) =>
+                    prop.id === updatedProperty.id ? updatedProperty : prop,
+                  );
+                }
+
+                return [updatedProperty, ...prev];
+              });
             }}
           />
         )}

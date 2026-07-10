@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { jsPDF } from "jspdf";
 import { Search,
   Download,
   ShieldAlert,
@@ -40,6 +41,7 @@ import {
 import {
   loginAdmin,
   fetchProperties,
+  approvePropertyForPublishing,
   updateProperty,
   deleteProperty,
   fetchDeals,
@@ -77,7 +79,7 @@ import ElectronicAgreementView from "./ElectronicAgreementView";
 
 interface AdminPortalProps {
   onLogout: () => void;
-  onRefreshProperties: () => void;
+  onRefreshProperties: (updatedProperty?: Property) => void;
 }
 
 export default function AdminPortal({
@@ -167,6 +169,9 @@ export default function AdminPortal({
   });
   const [selectedInspectProperty, setSelectedInspectProperty] =
     useState<Property | null>(null);
+  const [openingPropertyId, setOpeningPropertyId] = useState<string | null>(null);
+  const [approvingPropertyId, setApprovingPropertyId] = useState<string | null>(null);
+  const [isExportingFinancePdf, setIsExportingFinancePdf] = useState(false);
 
   // New Supervisor Form States
   const [newSvName, setNewSvName] = useState("");
@@ -304,6 +309,78 @@ export default function AdminPortal({
     return unsubscribe;
   }, [isAuthenticated, adminView]);
 
+  const handleExportFinancePdf = async () => {
+    if (isExportingFinancePdf) return;
+
+    try {
+      setIsExportingFinancePdf(true);
+
+      const approvedPayments = payments.filter((pay) => pay.status === "approved");
+      const pendingPayments = payments.filter((pay) => pay.status === "pending");
+      const rejectedPayments = payments.filter((pay) => pay.status === "rejected");
+      const totalIncome = approvedPayments.reduce((sum, pay) => sum + (pay.amount || 0), 0);
+
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const generatedAt = new Date().toLocaleString("en-GB");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Aden Admin Finance Report", 14, 16);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`Generated: ${generatedAt}`, 14, 22);
+
+      let y = 32;
+      const lineHeight = 6;
+
+      const writeLine = (label: string, value: string | number) => {
+        doc.text(`${label}: ${value}`, 14, y);
+        y += lineHeight;
+      };
+
+      writeLine("Total income (IQD)", totalIncome.toLocaleString("en-US"));
+      writeLine("Approved payments", approvedPayments.length);
+      writeLine("Pending payments", pendingPayments.length);
+      writeLine("Rejected payments", rejectedPayments.length);
+      writeLine("Active featured ads", properties.filter((p) => p.isFeatured).length);
+      writeLine("Pending proofs", notifs.pendingPayments);
+
+      y += 2;
+      doc.setFont("helvetica", "bold");
+      doc.text("Recent Transactions", 14, y);
+      doc.setFont("helvetica", "normal");
+      y += lineHeight;
+
+      const rows = payments.slice(0, 15);
+      if (rows.length === 0) {
+        doc.text("No transactions available.", 14, y);
+      } else {
+        rows.forEach((pay) => {
+          if (y > 280) {
+            doc.addPage();
+            y = 16;
+          }
+          const rowText = [
+            pay.createdAt ? new Date(pay.createdAt).toLocaleDateString("en-GB") : "-",
+            pay.packageName || "-",
+            pay.paymentMethod || "-",
+            `${Number(pay.amount || 0).toLocaleString("en-US")} IQD`,
+            pay.status || "-",
+          ].join(" | ");
+          doc.text(rowText, 14, y);
+          y += lineHeight;
+        });
+      }
+
+      doc.save(`aden-finance-report-${Date.now()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء إنشاء ملف PDF");
+    } finally {
+      setIsExportingFinancePdf(false);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
@@ -419,15 +496,50 @@ export default function AdminPortal({
   };
 
   const handleApproveProperty = async (id: string) => {
+    if (approvingPropertyId === id) return;
     try {
-      await updateProperty(id, { isApproved: true, pendingDeletion: false, status: 'للبيع' });
-      loadAdminData();
-      onRefreshProperties();
+      setApprovingPropertyId(id);
+      const optimisticUpdatedAt = new Date().toISOString();
+      setProperties((prev) =>
+        prev.map((prop) =>
+          prop.id === id
+            ? {
+                ...prop,
+                isApproved: true,
+                isSuspended: false,
+                status: 'للبيع',
+                updatedAt: optimisticUpdatedAt,
+              }
+            : prop,
+        ),
+      );
+      setSelectedInspectProperty((prev) =>
+        prev && prev.id === id
+          ? {
+              ...prev,
+              isApproved: true,
+              isSuspended: false,
+              status: 'للبيع',
+              updatedAt: optimisticUpdatedAt,
+            }
+          : prev,
+      );
+      const updated = await approvePropertyForPublishing(id);
+      void onRefreshProperties(updated);
       alert("تمت الموافقة على العقار ونشره بنجاح");
     } catch (err) {
       console.error(err);
       alert((err as Error)?.message || "حدث خطأ أثناء الموافقة")
+      void loadAdminData();
+    } finally {
+      setApprovingPropertyId(null);
     }
+  };
+
+  const handleViewProperty = (property: Property) => {
+    setOpeningPropertyId(property.id);
+    setSelectedInspectProperty(property);
+    setTimeout(() => setOpeningPropertyId(null), 0);
   };
 
   const handleToggleFeatured = async (p: Property) => {
@@ -491,7 +603,7 @@ export default function AdminPortal({
   
   const handleRestoreProperty = async (id: string) => {
     try {
-      await updateProperty(id, { pendingDeletion: false, isApproved: true, status: 'للبيع' });
+      await updateProperty(id, { isApproved: true, status: 'للبيع' });
       loadAdminData();
       onRefreshProperties();
       alert("تم استعادة العقار بنجاح");
@@ -1049,7 +1161,7 @@ export default function AdminPortal({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {properties.filter(p => p.pendingDeletion).map(p => (
+                    {properties.filter(p => p.status === 'مرفوض').map(p => (
                       <tr key={p.id} className="hover:bg-white/5 transition-colors text-slate-300">
                         <td className="py-4 pr-4 font-mono">{p.id.slice(0, 8)}</td>
                         <td className="py-4 pr-4">{p.title}</td>
@@ -1197,7 +1309,7 @@ export default function AdminPortal({
               </select>
             </div>
             <div className="space-y-4">
-              {properties?.filter(p => !p.pendingDeletion)
+              {properties?.filter(p => p.status !== 'مرفوض')
   .filter(p => !adminFilterStatus || 
     (adminFilterStatus === "موافقة" ? p.isApproved : 
     (adminFilterStatus === "قيد الانتظار" ? !p.isApproved && p.status !== 'مرفوض' : p.status === 'مرفوض'))
@@ -1216,11 +1328,6 @@ export default function AdminPortal({
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                        {p.pendingDeletion && (
-                          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                            طلب إلغاء نشر (حذف)
-                          </span>
-                        )}
                         <span
                           className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${p.isApproved ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}
                         >
@@ -1244,23 +1351,26 @@ export default function AdminPortal({
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setSelectedInspectProperty(p)}
+                      type="button"
+                      onClick={() => handleViewProperty(p)}
                       className="rounded-lg bg-slate-850 hover:bg-[#F27D26]/20 hover:text-[#F27D26] border border-white/5 px-3 py-2 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
                       title="عرض كامل التفاصيل والتحقق من المالك"
                     >
                       <Eye className="h-4 w-4" />
-                      <span>كامل التفاصيل</span>
+                      <span>{openingPropertyId === p.id ? 'جاري الفتح...' : 'كامل التفاصيل'}</span>
                     </button>
 
                     {!p.isApproved && (
                       <button
+                        type="button"
                         id={`btn-admin-approve-${p.id}`}
                         onClick={() => handleApproveProperty(p.id)}
+                        disabled={approvingPropertyId === p.id}
                         className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-[#ffffff] flex items-center gap-1 cursor-pointer"
                         title="موافقة ونشر"
                       >
                         <Check className="h-4 w-4" />
-                        <span>موافقة ونشر</span>
+                        <span>{approvingPropertyId === p.id ? 'جاري النشر...' : 'موافقة ونشر'}</span>
                       </button>
                     )}
                     <button
@@ -2282,8 +2392,13 @@ export default function AdminPortal({
                 ))}
               </div>
               <div className="mt-4 flex gap-2">
-                <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
-                  تصدير PDF
+                <button
+                  type="button"
+                  onClick={handleExportFinancePdf}
+                  disabled={isExportingFinancePdf}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700 disabled:opacity-60"
+                >
+                  {isExportingFinancePdf ? "جاري إنشاء PDF..." : "تصدير PDF"}
                 </button>
                 <button onClick={() => alert("قريباً - الميزة قيد التطوير")} className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-700">
                   تصدير Excel
@@ -2932,7 +3047,7 @@ export default function AdminPortal({
                     </button>
                   </div>
                   
-                  <div className="p-6 overflow-y-auto space-y-4 text-right" dir="rtl">
+                  <div className="p-6 overflow-y-auto space-y-4 text-right flex-1 min-h-0" dir="rtl">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-950 p-3 rounded-lg border border-white/5">
                         <div className="text-xs text-slate-400">اسم مقدم الطلب</div>
@@ -2965,23 +3080,12 @@ export default function AdminPortal({
                   </div>
                   
                   {showApplicationModal.status === 'pending' && (
-                    <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3">
+                    <div className="p-4 border-t border-white/10 bg-slate-950 flex gap-3 relative z-10 pointer-events-auto">
                       <button 
+                        type="button"
                         onClick={async () => {
                           // Approve: Update app status, create provider
                           await updateProviderApplication(showApplicationModal.id, { status: 'approved' });
-                          await addServiceProvider({
-                            name: showApplicationModal.name,
-                            category: showApplicationModal.category,
-                            governorate: showApplicationModal.governorate,
-                            city: '',
-                            address: '',
-                            description: showApplicationModal.details || '',
-                            logo: '',
-                            coverImage: '',
-                            yearsOfExperience: 0,
-                            status: 'نشط'
-                          });
                           setShowApplicationModal(null);
                           loadAdminData();
                         }}
@@ -2990,6 +3094,7 @@ export default function AdminPortal({
                         <Check className="w-4 h-4" /> قبول وإنشاء حساب
                       </button>
                       <button 
+                        type="button"
                         onClick={async () => {
                           const reason = window.prompt('سبب الرفض:');
                           if (reason !== null) {
@@ -3475,7 +3580,6 @@ export default function AdminPortal({
                   <button
                     onClick={() => {
                       handleApproveProperty(selectedInspectProperty.id);
-                      setSelectedInspectProperty({ ...selectedInspectProperty, isApproved: true });
                     }}
                     className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs font-bold text-[#ffffff] flex items-center gap-1.5 cursor-pointer"
                   >
