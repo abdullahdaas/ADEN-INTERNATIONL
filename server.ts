@@ -43,7 +43,7 @@ function getServerSupabase() {
       persistSession: false,
       autoRefreshToken: false,
     },
-    realtime: 
+    realtime: {
       transport: 'NodeWebSocket' as any,
     },
   });
