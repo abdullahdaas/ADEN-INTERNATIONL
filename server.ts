@@ -8,17 +8,12 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { createRequire } from 'module';
 
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_for_dev_only';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'abdullah';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '3008';
-
-const require = createRequire(process.cwd() + '/');
-const wsModule = require('ws');
-const NodeWebSocket = wsModule.WebSocket || wsModule;
 
 // Removed top level vite import
 import { db, firestore } from './src/data/db';
@@ -48,8 +43,8 @@ function getServerSupabase() {
       persistSession: false,
       autoRefreshToken: false,
     },
-    realtime: {
-      transport: NodeWebSocket,
+    realtime: 
+      transport: 'NodeWebSocket' as any,
     },
   });
 }
